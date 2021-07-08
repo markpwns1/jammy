@@ -4,6 +4,7 @@ Jammy is an original programming language written in NodeJS that transpiles to L
 
 ## Installation
 - `git clone https://github.com/markpwns1/jammy`
+- `cd jammy`
 - `npm install`
 
 ## Usage
