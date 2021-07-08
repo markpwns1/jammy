@@ -105,7 +105,7 @@ Some syntactic constructs in Jammy explicitly require an expression. A function 
   => a + b;
 }
 ```
-Semicolons are optional but may help avoid grammatical ambiguity in rare cases (I can't think of any off the top of my head, to be honest).
+Semicolons are optional but may help avoid grammatical ambiguity in rare cases (I can't think of any off the top of my head, to be honest). A block must have at least one statement inside it, or else it will be interpreted as an empty table.
 
 `>>` is shorthand for a block containing one statement. These two expressions are equivalent:
 ```
@@ -316,6 +316,27 @@ let x = {
 
 ### Table length
 Jammy has two ways to determine a table's length. One is to use `len my_table`. This is equivalent to Lua's `#my_table`. The other, more reliable (but slower) way is to use a function that Jammy has added to Lua's standard library: `table.length`. This counts the number of keys in a table.
+
+### Indexing objects 
+To index an object where the key is just a string, you can use `.` and then the name of the key, without quotes.
+```
+let a = {
+  x: 5
+};
+
+print a.x; // prints 5
+```
+
+To index an object where the key is anything but an variable-style string, you can use `#`.
+```
+let a = luatable(
+  {
+    y: 5
+  }
+);
+
+print a #1 #"y" // prints 5
+```
 
 ### `my` and `self`
 `my` is an alias for Lua's `self`. Jammy also has `self`. You can use either of them interchangeably.
