@@ -1,0 +1,490 @@
+{
+    function ast(type, props) {
+        return {
+            type: type,
+            ...props
+        }
+    }
+
+    function array_of(a) {
+        if (a == null) {
+            return [ ]
+        }
+        else return a
+    }
+
+    function leftify(head, tail) {
+        for(const i of tail) {
+            i.left = head;
+            head = i;
+        }
+        return head;
+    }
+
+    function get_nth(x, n) {
+        if(x) return x[n];
+        else return null;
+    }
+}
+
+start = program
+
+program "a program" = _ statements:(stmt _ ";"? _)+ {
+    return statements.map(x => x[0]);
+}
+
+expr "expression" = binop
+    / try_expr
+    / len
+    / spread
+    / use
+    / unary_op 
+    / resume 
+    / table 
+    / block_expr 
+    / if_expr 
+    / match_expr
+    / index 
+    / factor
+    / tuple
+
+expr_no_binop "expression" = len
+    / try_expr
+    / spread
+    / use
+    / unary_op 
+    / resume 
+    / table 
+    / block_expr 
+    / if_expr 
+    / match_expr
+    / index 
+    / factor
+    / tuple
+
+expr_no_unop "expression" =  binop
+    / try_expr
+    / len
+    / spread
+    / use
+    / resume 
+    / table 
+    / block_expr 
+    / if_expr 
+    / match_expr
+    / index 
+    / factor
+    / tuple
+
+stmt "statement" = yield_stmt 
+    / try_stmt
+    / use
+    / resume
+    / continue_stmt 
+    / break_stmt 
+    / match_stmt
+    / for_in_stmt 
+    / var_dec 
+    / if_stmt 
+    / return_stmt 
+    / block_stmt 
+    / while_stmt 
+    / subroutine_call
+    / var_assign
+
+KEYWORDS = "true" / "false" / "try" / "for" / "in" / "use" / "yield" / "resume" / "continue" / "break" / "match" / "let" / "if" / "return" / "while" / "else"
+
+try_expr "try expression" = "try" _ body:expr _ on_fail:("else" _ expr)? {
+    return ast("try_expr", {
+        body: body,
+        on_fail: get_nth(on_fail, 2)
+    });
+}
+
+try_stmt "try statement" = "try" _ body:stmt _ on_fail:("else" _ stmt)? {
+    return ast("try_stmt", {
+        body: body,
+        on_fail: get_nth(on_fail, 2)
+    });
+}
+
+break_stmt "break statement" = "break" {
+    return ast("break_stmt");
+}
+
+use "use expression" = "use" _ path:expr_no_binop {
+    return ast("use", {
+        path: path
+    });
+}
+
+len "len function" = "len" _ val:expr_no_binop  {
+    return ast("len", {
+        value: val
+    });
+}
+
+spread = "..." _ right:expr_no_binop {
+    return ast("method_call", {
+        left: ast("variable", {
+            name: "unpack"
+        }),
+        args: [ right ]
+    });
+}
+
+continue_stmt "continue statement" = "continue" {
+    return ast("continue_stmt");
+}
+
+yield_stmt "yield statement" = "yield" _ values:expr_list? {
+    return ast("yield_stmt", {
+        values: array_of(values)
+    });
+}
+
+tuple "tuple" = "(" _ head:expr _ tail:("," _ expr)+ _ ")" {
+    return ast("tuple", {
+        values: [
+            head,
+            ...tail.map(x => x[2])
+        ]
+    });
+}
+
+resume "resume statement" = "resume" _ co:expr _ args:("with" _ expr_list)? {
+    return ast("resume", {
+        coroutine: co,
+        arguments: array_of(get_nth(args, 2))
+    });
+}
+
+match_case_stmt "match case" = ca:expr _ "=>" _ val:stmt {
+    return {
+        case: ca,
+        value: val
+    }
+}
+
+match_cases_stmt "list of match cases" = cases:( _ match_case_stmt _ ";"?)+ {
+    return cases.map(x => x[1]);
+}
+
+match_stmt "match statement" = "match" _ value:expr _ "{" _ cases:match_cases_stmt _ def:("else" _ stmt _ ";"?)? _ "}" {
+    return ast("match_stmt", {
+        value: value,
+        cases: cases,
+        default: get_nth(def, 2)
+    });
+}
+
+match_case_expr "match case" = ca:expr _ "=>" _ val:expr {
+    return {
+        case: ca,
+        value: val
+    }
+}
+
+match_cases_expr "list of match cases" = cases:( _ match_case_expr _ ","?)+ {
+    return cases.map(x => x[1]);
+}
+
+match_expr "match expression" = "match" _ value:expr _ "{" _ cases:match_cases_expr _ def:("else" _ expr _ ";"?)? _ "}" {
+    return ast("match_expr", {
+        value: value,
+        cases: cases,
+        default: get_nth(def, 2)
+    });
+}
+
+for_in_stmt "for-in statement" = "for" _ vars:identifier_list _ "in" _ iter:expr _ ","? _ body:stmt {
+    return ast("for_in_stmt", {
+        variables: vars,
+        iterator: iter,
+        body: body
+    });
+}
+
+block_expr "block" = "{" _ statements:(stmt _ ";"? _)+ _ "}" {
+    return ast("block_expr", {
+        statements: statements.map(x => x[0])
+    });
+} / ">>" _ s:stmt {
+    return ast("block_expr", {
+        statements: [ s ]
+    });
+}
+
+block_stmt "block" = b:block_expr {
+    b.type = "block_stmt";
+    return b;
+}
+
+var_dec "variable declaration" = "let" _ vars:identifier_list _ exprs:(_ "=" _ expr_list)? {
+    return ast("var_dec", {
+        variables: vars,
+        values: get_nth(exprs, 3)
+    });
+}
+
+index_type = index_object / index_key / method_call / self_method_call
+
+lhand "assignable value" = left:factor _ indexes:(index_type)* {
+    const chain = leftify(left, indexes);
+    if(chain.type != "index_object" && chain.type != "index_key" && chain.type != "variable") error("Must end in an assignable field");
+
+    return chain;
+}
+
+lhand_list "list of assignable values"= head:lhand _ tail:("," _ lhand _)* {
+    return [
+        head,
+        ...tail.map(x => x[2])
+    ];
+}
+
+var_assign "variable assignment" = left:lhand_list _ "=" _ exprs:expr_list {
+    return ast("var_assign", {
+        leftHand: left,
+        values: exprs
+    });
+}
+
+index_type_stmt = index_object / index_key / method_call_stmt / self_method_call
+
+subroutine_call "method call statement" = left:factor _ indexes:(!(method_call_stmt / self_method_call) index_type_stmt _)* _ call:(method_call_stmt / self_method_call) {
+    return leftify(left, [ ...indexes.map(x => x[1]), call ]);
+}
+
+identifier_list "identifier list" = head:identifier tail:(_ "," _ identifier)* {
+    return [
+        head,
+        ...tail.map(x => x[3])
+    ];
+}
+
+if_stmt "if statement" = "if" _ condition:expr _ ","? _ true_branch:stmt false_branch:(_ "else" _ stmt)? {
+    return ast("if_stmt", {
+        condition: condition,
+        true_branch: true_branch,
+        false_branch: get_nth(false_branch, 3)
+    });
+}
+
+while_stmt "while statement" = "while" _ condition:expr _ ","? _ body:stmt {
+    return ast("while_stmt", {
+        condition: condition,
+        body: body
+    });
+}
+
+return_values = v:(expr_list / ("(" _ expr_list _ ")")) {
+    return v? (v[0] == "("? v[2] : v) : [ ]
+}
+
+return_stmt "return statement" = "=>" _ v:(expr) {
+    return ast("return_stmt", {
+        value: v
+    });
+}
+
+if_expr "if expression" = "if" _ condition:expr _ ","? _ true_branch:expr _ "else" _ false_branch:expr {
+    return ast("if_expr", {
+        condition: condition,
+        true_branch: true_branch,
+        false_branch: false_branch
+    });
+}
+
+factor "value" = x:(array / string / bool / nil / my / func / variable / brackets / number) {
+    return x;
+}
+
+binop_type "binary operator" = _ op:("~=" / "==" / ">=" / "<=" / ".." / "&&" / "||" / "+" / "-" / "*" / "/" / "^" / ">" / "<" / "%") _ right:expr_no_binop {
+    return ast("binary_op", {
+        op: op,
+        right: right
+    });
+}
+
+binop "binary operation" = left:expr_no_binop _ binops:(binop_type)+ {
+    return leftify(left, binops);
+}
+
+expr_list "list of expressions" = head:expr _ tail:("," _ expr)* {
+    return [
+        head,
+        ...tail.map(x => x[2])
+    ];
+}
+
+cool_method_call "method call (without parentheses)" = _ arg:expr {
+    return ast("method_call", {
+        args: [ arg ]
+    });
+}
+
+method_call "method call" = "(" _ args:expr_list? _ ")" _ {
+    return ast("method_call", {
+        args: array_of(args)
+    });
+} / "!" {
+    return ast("method_call", {
+        args: [ ]
+    });
+}
+
+method_call_stmt "method call statement" = cool_method_call / method_call 
+
+self_method_call "object method call" = ":" _ member:identifier _ "(" _ args:expr_list? _ ")" _ {
+    return ast("self_method_call", {
+        member: member,
+        args: array_of(args)
+    });
+} / ":" _ member:identifier _ "!" {
+    return ast("self_method_call", {
+        member: member,
+        args: [ ]
+    });
+}
+
+index_key "index by key" = "#" _ key:factor _ {
+    return ast("index_key", {
+        key: key
+    });
+}
+
+index_object "index by field" =  "." _ name:identifier _ {
+    return ast("index_object", {
+        name: name
+    });
+}
+
+index "object index chain" = left:factor _ indexes:(index_type)+ {
+    return leftify(left, indexes);
+}
+
+unary_op "unary operator" = op:("-" / "+" / "!") _ right:expr_no_binop {
+    return ast("unary_op", {
+        op: op,
+        right: right
+    });
+}
+
+brackets "parenthesized expression" = "(" _ content:expr _ ")" {
+    return ast("brackets", {
+        content: content
+    });
+}
+
+number "number" = content:$([0-9]+ _ ("." [0-9]+)?) {
+    return ast("number", {
+        value: parseFloat(content)
+    });
+}
+
+bool "boolean" = content:("true" / "false") {
+    return ast("bool", {
+        value: content == "true"
+    });
+}
+
+variable "variable" = name:identifier {
+    return ast("variable", {
+        name: name
+    });
+}
+
+string "string" = '"' chars:string_char* '"' { 
+    return ast("string", {
+        value: chars.join('')
+    });
+}
+
+string_char
+  = !('"' / "\\") char:. { return char; }
+  / "\\" sequence:string_escape { return sequence; }
+
+string_escape
+  = '"'
+  / "\\"
+  / "b"  { return "\b";   }
+  / "f"  { return "\f";   }
+  / "n"  { return "\n";   }
+  / "r"  { return "\r";   }
+  / "t"  { return "\t";   }
+  / "v"  { return "\x0B"; }
+
+identifier "identifier" = !(KEYWORDS !([_0-9a-zA-Z])) x:$([_a-zA-Z][_0-9a-zA-Z]*) {
+    return x;
+}
+
+parameter_list = head:identifier tail:(_ "," _ identifier)* _ variadic:"..."? {
+    return {
+        arguments: [
+            head,
+            ...tail.map(x => x[3])
+        ],
+        variadic: Boolean(variadic)
+    };
+}
+
+func "function" = co:"coroutine"? _ args:((identifier _ "..."?) / ("(" _ parameter_list? _ ")")) _ method:(":=>" / "=>") _ body:expr {
+    
+    // console.log(args);
+    let variadic = false;
+    let a = [ ];
+    if(args[0] == "(") {
+        if(args[2]) {
+            a = args[2].arguments;
+            variadic = args[2].variadic;
+        }
+    }
+    else {
+        a = [ args[0] ];
+        variadic = Boolean(args[2]);
+    }
+    
+    return ast("function", {
+        isCoroutine: Boolean(co),
+        args: a,
+        variadic: variadic,
+        takesSelf: method == ":=>",
+        body: body
+    });
+}
+
+nil = "nil" {
+    return ast("nil");
+}
+
+array "array" = "[" _ elements:expr_list? _ "]" {
+    return ast("array", {
+        elements: elements
+    });
+}
+
+table_element "table element" = key:identifier _ ":" _ value:expr {
+    return {
+        key: key,
+        value: value
+    };
+}
+
+my = "my" {
+    return ast("variable", {
+        name: "self"
+    });
+}
+
+table "table" = "{" _ entries:(table_element _ ","? _)* _ "}" {
+    return ast("table", {
+        entries: array_of(entries).map(x => x[0])
+    });
+}
+
+// optional whitespace
+_  "whitespace" = [ \t\r\n]*
+
+// mandatory whitespace
+__ = [ \t\r\n]+
