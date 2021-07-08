@@ -1,9 +1,17 @@
 const peg = require("pegjs");
 const fs = require("fs");
-const grammarContents = fs.readFileSync("grammar", "utf8");
-const parser = peg.generate(grammarContents);
 const path = require("path");
 const luamin = require("luamin");
+
+const file_extension = f => f.substring(f.lastIndexOf(".") + 1);
+const without_file_extension = f => f.substring(0, f.lastIndexOf("."));
+const file_name = f => f.substring(f.lastIndexOf("/") + 1);
+const relative_path = (dir, path) => path.startsWith(dir)? path.substring(dir.length + 1) : path;
+const get_dir = f => f.substring(0, f.lastIndexOf("/"));
+const join_path = (a, b) => path.join(a, b).toString().replace(/\\/g, '/');
+
+const grammarContents = fs.readFileSync(join_path(__dirname, "grammar"), "utf8");
+const parser = peg.generate(grammarContents);
 
 const evaluators = { };
 const pretty = ast => JSON.stringify(ast, null, 2);
@@ -16,6 +24,8 @@ const current_loop = () => loops[loops.length - 1];
 const scopes = [ ];
 
 const current_scope = () => scopes[scopes.length - 1];
+
+
 
 let output = "";
 
@@ -403,7 +413,7 @@ const translate = filename => {
     return emitted;
 }
 
-const preface = luamin.minify(fs.readFileSync("jammy_header.lua", "utf-8"));
+const preface = luamin.minify(fs.readFileSync(join_path(__dirname, "jammy_header.lua"), "utf-8"));
 
 const compile = (filename, mode = "file") => {
     let txt = "-- " + filename + " - GENERATED " + new Date().toLocaleString() + "\n";
@@ -428,13 +438,6 @@ const compile = (filename, mode = "file") => {
 
     return minify? luamin.minify(txt + translate(filename)) : (txt + translate(filename).replace(/;/g, "\n"));
 }
-
-const file_extension = f => f.substring(f.lastIndexOf(".") + 1);
-const without_file_extension = f => f.substring(0, f.lastIndexOf("."));
-const file_name = f => f.substring(f.lastIndexOf("/") + 1);
-const relative_path = (dir, path) => path.startsWith(dir)? path.substring(dir.length + 1) : path;
-const get_dir = f => f.substring(0, f.lastIndexOf("/"));
-const join_path = (a, b) => path.join(a, b).toString().replace(/\\/g, '/');
 
 let compiled_entry_point = false;
 
@@ -508,12 +511,17 @@ program.option("-m, --minify", "Minifies compiled files (including Lua files)");
 
 program.parse(process.argv);
 
+if(process.argv.length < 3) {
+    console.log(program.help());
+    process.exit(0);
+}
+
 const compile_mode = program.args[0].toLowerCase();
-const src_dir = program.args[1];
-const out_dir = program.args[2];
+const src_dir = program.args[1].replace(/\\/g, "/");
+const out_dir = program.args[2].replace(/\\/g, "/");;
 
 const options = program.opts();
-const entry_file = options.entry;
+const entry_file = options.entry.replace(/\\/g, "/");
 const minify = options.minify;
 
 compiled_entry_point = false;
@@ -526,7 +534,7 @@ compile_dir(src_dir, out_dir, {
 
 if(compile_mode == "program" && options.std) {
     console.log("Compiling standard library...");
-    compile_dir("std", join_path(out_dir, "std"), {
+    compile_dir(join_path(__dirname, "std").replace(/\\/g, "/"), join_path(out_dir, "std"), {
         compile_mode: "library"
     });
 }

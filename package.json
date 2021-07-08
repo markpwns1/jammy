@@ -1,0 +1,25 @@
+{
+  "name": "jammy",
+  "version": "0.1.0",
+  "description": "The Jammy programming language",
+  "main": "jammy.js",
+  "dependencies": {
+    "commander": "^8.0.0",
+    "luamin": "^1.0.4",
+    "pegjs": "^0.10.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/markpwns1/jammy.git"
+  },
+  "author": "markpwns1",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/markpwns1/jammy/issues"
+  },
+  "homepage": "https://github.com/markpwns1/jammy#readme"
+}
