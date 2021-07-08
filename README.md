@@ -10,16 +10,16 @@ Jammy is an original programming language written in NodeJS that transpiles to L
 On windows, you can run `jammy.bat` (or just `jammy`), and on Linux you can run `jammy.sh`. Regardless, you should be able to run `node jammy.js`. There are two main "modes" in which the Jammy compiler operates.
 
 ### Program mode
-Run `node jammy.js program <src dir> <out dir> [-e <entry file>]` to compile an entire directory. You can then run this file by running the entry file in lua. For example:
+Run `jammy program <src dir> <out dir> [-e <entry file>]` to compile an entire directory. You can then run this file by running the entry file in lua. For example:
 ```
-> node jammy.js program src out -e myprogram.jam
+> jammy program src out -e myprogram.jam
 > lua out/myprogram.lua
 Hello world!
 ```
 The path to the entry file must be relative to the source directory. In the example above, the entry file is located at `src/program.jam`. By default, the entry file is `main.jam`.
 
 ### Library mode
-Run `node jammy.js library src out` to compile an entire directory *as a library.* This allows any compiled file to be `require()`-ed by Lua files or `use`-d by Jammy files and work fine.
+Run `jammy library src out` to compile an entire directory *as a library.* This allows any compiled file to be `require()`-ed by Lua files or `use`-d by Jammy files and work fine.
 
 ### Compiler flags
 - `-V, --version` output the version number
