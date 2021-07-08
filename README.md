@@ -7,7 +7,7 @@ Jammy is an original programming language written in NodeJS that transpiles to L
 - `npm install`
 
 ## Usage
-There are two main "modes" in which the Jammy compiler operates.
+On windows, you can run `jammy.bat` (or just `jammy`), and on Linux you can run `jammy.sh`. Regardless, you should be able to run `node jammy.js`. There are two main "modes" in which the Jammy compiler operates.
 
 ### Program mode
 Run `node jammy.js program <src dir> <out dir> [-e <entry file>]` to compile an entire directory. You can then run this file by running the entry file in lua. For example:
