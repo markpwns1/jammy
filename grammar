@@ -324,7 +324,7 @@ cool_method_call "method call (without parentheses)" = _ arg:expr {
     });
 }
 
-method_call "method call" = "(" _ args:expr_list? _ ")" _ {
+method_call "method call" = _ "(" _ args:expr_list? _ ")" _ {
     return ast("method_call", {
         args: array_of(args)
     });
@@ -336,7 +336,7 @@ method_call "method call" = "(" _ args:expr_list? _ ")" _ {
 
 method_call_stmt "method call statement" = cool_method_call / method_call 
 
-self_method_call "object method call" = ":" _ member:identifier _ "(" _ args:expr_list? _ ")" _ {
+self_method_call "object method call" = _ ":" _ member:identifier _ "(" _ args:expr_list? _ ")" _ {
     return ast("self_method_call", {
         member: member,
         args: array_of(args)
@@ -397,13 +397,13 @@ variable "variable" = name:identifier {
 
 string "string" = '"' chars:string_char* '"' { 
     return ast("string", {
-        value: chars.join('')
+        value: chars.join('').replace(/\n/g, "\\n").replace(/\r/g, "")
     });
 }
 
 string_char
   = !('"' / "\\") char:. { return char; }
-  / "\\" sequence:string_escape { return sequence; }
+  / "\\" sequence:. { return "\\" + sequence; }
 
 string_escape
   = '"'

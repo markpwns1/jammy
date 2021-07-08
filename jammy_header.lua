@@ -6,6 +6,10 @@ table.length = function (t)
     return n
 end
 
+math.sign = function (x)
+    if x < 0 then return -1 else return 1 end
+end
+
 unpack = unpack or table.unpack
 
 function lt(a, b) return a < b end
@@ -17,7 +21,7 @@ function ternary(a, b, c) if a then return b else return c end end
 
 function incrange(a, b, c)
     if b == nil and c == nil then return range(1, a+1)
-    else return range(a, b+1, c) end
+    else return range(a, b + math.sign(c), c) end
 end
 
 function range(a, b, c)

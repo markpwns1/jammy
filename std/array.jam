@@ -78,26 +78,6 @@ array.remove_at = i :=> table.remove(my._elements, i + 1)
 array.remove = item :=> >> for i, v in ipairs(my._elements) if v == item, table.remove(my._elements, i);
 
 array.contains = item :=> !! >> for _, v in ipairs(my._elements) if item == v, => true;
-/*
-item :=>         function syntax, the colon specifies that "my" can be used
-!!               not not, useful for turning a truthy/falsy value to an explicit boolean
->>               turns *a single* statement into a value, returning whatever the statement returns
-for ... in ...   a normal for-in loop, the body being the statement directly afterwards
-if ... ,         a normal if statement, the body being the statement directly afterwards
-=> true          "return true"
-
-Compiles to:
-
-array.contains = function(self, item)
-    return not not (function()
-        for _, v in ipairs(my._elements) do
-            if item == v then
-                return true
-            end
-        end
-    end)()
-end
-*/
 
 array.get_elements = () :=> my._elements;
 
