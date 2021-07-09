@@ -420,14 +420,19 @@ const compile = (filename, mode = "file") => {
     txt += "-- JAMMY BOILERPLATE\n";
 
     // IMPLEMENTS "use"
-    if (mode == "entry_point") {
-        txt += `local __parent_dir;arg[0] = arg[0]:gsub("\\\\", "/");if arg[0]:find("/") then __parent_dir = arg[0]:match("(.*/)") else __parent_dir = "" end;`;
+    if(mode == "love_entry_point") {
+        txt += `local __use = require;`;
     }
     else {
-        txt += `local __require_params = (...);if not __require_params then error("Cannot run this module because it was not compiled as an entry point.") end;local __parent_dir = __require_params:match("(.-)[^%.]+$"):gsub("%.", "/");`;
+        if (mode == "entry_point") {
+            txt += `local __parent_dir;arg[0] = arg[0]:gsub("\\\\", "/");if arg[0]:find("/") then __parent_dir = arg[0]:match("(.*/)") else __parent_dir = "" end;`;
+        }
+        else {
+            txt += `local __require_params = (...);if not __require_params then error("Cannot run this module because it was not compiled as an entry point.") end;local __parent_dir = __require_params:match("(.-)[^%.]+$"):gsub("%.", "/");`;
+        }
+    
+        txt += `local function a(b,c)b,c=b:gsub("\\\\","/"),c:gsub("\\\\","/")local d,e={},{}for f in b:gmatch("[^/]+")do table.insert(d,f)end;for f in c:gmatch("[^/]+")do table.insert(e,f)end;for g,h in ipairs(e)do if h==".."then d[#d]=nil else d[#d+1]=h end end;return table.concat(d,"/")end local function __use(path) return require(a(__parent_dir, path):gsub("/", ".")) end;`;    
     }
-
-    txt += `local function a(b,c)b,c=b:gsub("\\\\","/"),c:gsub("\\\\","/")local d,e={},{}for f in b:gmatch("[^/]+")do table.insert(d,f)end;for f in c:gmatch("[^/]+")do table.insert(e,f)end;for g,h in ipairs(e)do if h==".."then d[#d]=nil else d[#d+1]=h end end;return table.concat(d,"/")end local function __use(path) return require(a(__parent_dir, path):gsub("/", ".")) end;`;
     
     // ----------------
 
@@ -460,9 +465,9 @@ const compile_dir = (dir, out, settings) => {
                 
                 process.stdout.write(join_path(dir, item) + " -> " + join_path(out,  without_file_extension(item) + ".lua ..."));
                 let text;
-                if (settings && settings.compile_mode == "program") {
+                if (settings && (settings.compile_mode == "program" || settings.compile_mode == "love")) {
                     const is_entry_point = (join_path(dir, item)) == join_path(dir, settings.entry_file);
-                    text = compile(join_path(dir, item), is_entry_point? "entry_point" : "file");
+                    text = compile(join_path(dir, item), is_entry_point? (settings.compile_mode == "love"? "love_entry_point" : "entry_point") : "file");
                     if(is_entry_point)
                         compiled_entry_point = true;
                 }
@@ -500,6 +505,7 @@ program.addHelpText("before",
 `
 Compile modes are: program, library, file
 program -- A program to be run using 'lua <file>.lua'
+love -- Like program mode but compatible with Love2D. The entry point must be main.jam
 library -- A library to be referenced by other Lua or jammy files
 file -- Raw compilation without prepending the jammy header
 `);
@@ -529,7 +535,7 @@ compiled_entry_point = false;
 console.log("Compiling '" + src_dir + "' ...");
 compile_dir(src_dir, out_dir, {
     compile_mode: compile_mode,
-    entry_file: entry_file
+    entry_file: compile_mode == "love"? "main.jam" : entry_file
 });
 
 if(compile_mode == "program" && options.std) {
