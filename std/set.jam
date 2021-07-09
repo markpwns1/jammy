@@ -3,11 +3,11 @@ set = prototype!;
 
 set.constructor = elements... :=> {
     my._elements = { };
-    for k, v in ipairs(elements),
+    for k, v in ipairs elements,
         my._elements #v = true;
 };
 
-set.new = elements... => set(...elements);
+set.new = elements... => set ...elements;
 
 set.contains = e :=> my._elements #e == true;
 set.has = set.contains;
@@ -21,29 +21,29 @@ set.cardinality = set.size;
 
 set.strict_subset = (a, b) => {
     if a:size! >= b:size!, => false;
-    for k, _ in pairs(a._elements) if !(b._elements #k), => false;
+    for k, _ in pairs a._elements, if !(b._elements #k), => false;
     => true;
 };
 
 set.subset = (a, b) => {
     if a:size! > b:size!, => false;
-    for k, _ in pairs(a._elements) if !(b._elements #k), => false;
+    for k, _ in pairs a._elements, if !(b._elements #k), => false;
     => true;
 };
 
 set.equal_to = (a, b) => {
     if a:size! == b:size!, => false;
-    for k, _ in pairs(a._elements) if !(b._elements #k), => false;
+    for k, _ in pairs a._elements, if !(b._elements #k), => false;
     => true;
 };
 
-set.strict_superset = (a, b) => b:strict_subset(a);
-set.superset_eq = (a, b) => b:subset(a);
+set.strict_superset = (a, b) => b:strict_subset a;
+set.superset_eq = (a, b) => b:subset a;
 
 set.iter = () :=> {
     let n = 0;
     let elements = luatable!;
-    for k, _ in pairs(my._elements) {
+    for k, _ in pairs my._elements {
         elements #(len elements + 1) = k;
         n = n + 1;
     }
@@ -57,11 +57,11 @@ set.iter = () :=> {
 
 set.to_table = () :=> {
     let t = luatable!;
-    for k, _ in pairs(my._elements), t #(len t + 1) = k;
+    for k, _ in pairs my._elements, t #(len t + 1) = k;
     => t;
-}
+};
 
-set.shallow_copy = () :=> set(...self:to_table!);
+set.shallow_copy = () :=> set ...self:to_table!;
 
 set.clear = () :=> >> for x in self:iter!, my._elements #x = nil;
 
@@ -69,9 +69,9 @@ set.clear = () :=> >> for x in self:iter!, my._elements #x = nil;
 
 set.__tostring = () :=> {
     let str = "{ ";
-    let i, n = 0, table.length(my._elements);
-    for k, _ in pairs(my._elements) {
-        str = str .. tostring(k);
+    let i, n = 0, table.length my._elements;
+    for k, _ in pairs my._elements {
+        str = str .. tostring k;
         i = i + 1
         if i < n, str = str .. ", ";
     }

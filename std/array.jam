@@ -1,29 +1,29 @@
 
-array = prototype!
+array = prototype!;
 
 array.constructor = elements... :=> >> self._elements = elements;
 
-array.new = elements... => array(...elements);
+array.new = elements... => array ...elements;
 
-array.from_table = t => array(...t);
+array.from_table = t => array ...t;
 
 array.__index = key :=> 
-    if type(key) == "number", my._elements#(key + 1) 
+    if type key == "number", my._elements #(key + 1) 
     else if key == "length", len my._elements
-    else array #key
+    else array #key;
 
 array.__newindex = (key, value) :=> >> 
-    if type(key) == "number", 
+    if type key == "number", 
         if (key < 0) || (key > my.length), 
-            error("Attempt to set out-of-bounds index in array: " .. key .. " -- Valid bounds are [0, " .. my.length .. ")")
-        else my._elements#(key + 1) = value
-    else rawset(self, key, value)
+            error "Attempt to set out-of-bounds index in array: " .. key .. " -- Valid bounds are [0, " .. my.length .. ")"
+        else my._elements #(key + 1) = value
+    else rawset(self, key, value);
 
 array.__tostring = () :=> {
     let str = "[ ";
     let n = len my._elements;
-    for i in incrange(n) {
-        str = str .. tostring(my._elements#i);
+    n:times () => {
+        str = str .. tostring my._elements #i;
         if i < n, str = str .. ", ";
     }
     => str .. " ]";
@@ -48,12 +48,12 @@ array.ipairs = () :=> {
 };
 
 array.first_index_of = item :=> >> 
-    for i in incrange(len my._elements) 
-        if my._elements #i == item, => i - 1
+    for i in incrange len my._elements
+        if my._elements #i == item, => i - 1;
 
 array.last_index_of = item :=> >> 
     for i in incrange(len my._elements, 1, -1)
-        if my._elements #i == item, => i - 1
+        if my._elements #i == item, => i - 1;
 
 array.insert = (i, item) :=> >> table.insert(my._elements, i, item);
 
@@ -73,19 +73,19 @@ array.pop = () :=> {
     => item;
 };
 
-array.remove_at = i :=> table.remove(my._elements, i + 1)
+array.remove_at = i :=> table.remove(my._elements, i + 1);
 
-array.remove = item :=> >> for i, v in ipairs(my._elements) if v == item, table.remove(my._elements, i);
+array.remove = item :=> >> for i, v in ipairs my._elements if v == item, table.remove(my._elements, i);
 
-array.contains = item :=> !! >> for _, v in ipairs(my._elements) if item == v, => true;
+array.contains = item :=> bool >> for _, v in ipairs my._elements if item == v, => true;
 
 array.get_elements = () :=> my._elements;
 
-array.shallow_copy = () :=> array.from_table(my._elements);
+array.shallow_copy = () :=> array.from_table my._elements;
 
 array.equal_to = (a, b) => {
     if len a._elements ~= len b._elements, => false;
-    for i in incrange(len a._elements) 
+    for i in incrange len a._elements
         if (a._elements #i) ~= (b.elements #i), => false;
     => true;
 };
@@ -102,7 +102,7 @@ array.slice = (start_index, end_index) :=> {
         j = j + 1;
     }
 
-    => array.from_table(sliced_table)
+    => array.from_table sliced_table;
 };
 
 array.concat = (a, b) => {
@@ -112,39 +112,39 @@ array.concat = (a, b) => {
     => c;
 };
 
-array.clear = () :=> >> for i in incrange(len my._elements), my._elements #i = nil;
+array.clear = () :=> >> for i in incrange len my._elements, my._elements #i = nil;
 
 array.first = () :=> my._elements #1;
 
-array.last = () :=> my._elements #(len my._elements)
+array.last = () :=> my._elements #(len my._elements);
 
 array.head = array.first;
 
-array.tail = () :=> self:slice(1)
+array.tail = () :=> self:slice 1;
 
-array.get = i :=> my._elements #(i + 1)
+array.get = i :=> my._elements #(i + 1);
 
 array.set_elements = t :=> {
     let t_n, my_n = len t._elements, len my._elements;
     let i = 1;
 
-    while i <= t_n {
+    while i <= t_n, {
         my._elements #i = t._elements #i;
         i = i + 1;
-    }
+    };
 
-    while i <= my_n {
+    while i <= my_n, {
         my._elements #i = nil;
         i = i + 1;
-    }
+    };
 };
 
 array.set = (i, item) :=> {
     if (i < 0) || (i >= my.length), 
-        error("Attempt to set out-of-bounds index in array: " .. index .. " -- Valid bounds are [0, " .. my.length .. ")")
+        error "Attempt to set out-of-bounds index in array: " .. index .. " -- Valid bounds are [0, " .. my.length .. ")"
     else {
         my._elements #(i + 1) = item;
         => item;
-    }
+    };
 };
 

@@ -58,19 +58,19 @@ evaluators.variable = ast => {
 }
 
 evaluators.index_object = ast => {
-    return evaluate(ast.left) + "." + ast.name;
+    return "(" + evaluate(ast.left) + ")." + ast.name;
 }
 
 evaluators.index_key = ast => {
-    return evaluate(ast.left) + "[" + evaluate(ast.key) + "]";
+    return "(" + evaluate(ast.left) + ")[" + evaluate(ast.key) + "]";
 }
 
 evaluators.method_call = ast => {
-    return evaluate(ast.left) + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
+    return "(" + evaluate(ast.left) + ")(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
 }
 
 evaluators.self_method_call = ast => {
-    return evaluate(ast.left) + ":" + ast.member + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
+    return "(" + evaluate(ast.left) + "):" + ast.member + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
 }
 
 evaluators.try_stmt = ast => {
@@ -104,7 +104,7 @@ evaluators.try_stmt = ast => {
 }
 
 evaluators.block_stmt = ast => {
-    return "do " + ast.statements.map(x => evaluate(x)).join("; ") + " end";
+    return "do " + ast.statements.map(x => evaluate(x)).join("; ") + "; end";
 }
 
 evaluators.block_expr = (ast, simplify = false) => {
@@ -117,7 +117,7 @@ evaluators.block_expr = (ast, simplify = false) => {
     scopes.pop();
 
     if(simplify) return body;
-    else return "(function() " + body + " end)()";
+    else return "(function() " + body + "; end)()";
 }
 
 evaluators.return_stmt = ast => {
@@ -378,11 +378,16 @@ const translate = filename => {
     }
     catch  (err) {
         if (!err.hasOwnProperty('location')) throw(err);
-    
+        console.log(JSON.stringify(err, null, 2));
         let lines = source.split("\n");
     
-        let expected = err.expected.map(x => expected_to_string(x));
-        expected = expected.filter((item, pos) => expected.indexOf(item) == pos);
+        let expected;
+        if(err.expected) {
+            expected = err.expected
+                .map(x => expected_to_string(x));
+            expected = expected
+                .filter((item, pos) => expected.indexOf(item) == pos);
+        }
 
         let text = "";
         text += "\nSYNTAX ERROR @ Ln " + err.location.start.line + ", col " + err.location.start.column + "\n";
@@ -393,10 +398,20 @@ const translate = filename => {
         for (let i = 0; i < err.location.start.column - 1; i++) {
             text += " ";
         }
-        text += "^";
+        text += "^\n";
 
-        text += "\nUnexpected \"" + err.found + "\" -- expected one of:\n" + expected.map(x => " - " + x + "\n").join("");
-        // console.log(err);
+        if(err.expected && err.expected.length == 1 && err.expected[0].type == "end") {
+            text += "\nInvalid syntax somewhere in the statement or block that starts here.";
+        }
+        else {
+            if(err.found) {
+                text += "\nUnexpected \"" + err.found + "\"";
+            }
+            
+            if(expected) {
+               text += " -- expected one of:\n" + expected.map(x => " - " + x + "\n").join("");
+            }
+        }
         
         
         console.log(text);
@@ -441,7 +456,7 @@ const compile = (filename, mode = "file") => {
         
     txt += "\n-- END JAMMY BOILERPLATE\n";
 
-    return minify? luamin.minify(txt + translate(filename)) : (txt + translate(filename).replace(/;/g, "\n"));
+    return minify? luamin.minify(txt + translate(filename)) : (txt + translate(filename).replace(/;/g, ";\n"));
 }
 
 let compiled_entry_point = false;
@@ -538,12 +553,12 @@ compile_dir(src_dir, out_dir, {
     entry_file: compile_mode == "love"? "main.jam" : entry_file
 });
 
-if(compile_mode == "program" && options.std) {
+if(compile_mode == "program" || compile_mode == "love" && options.std) {
     console.log("Compiling standard library...");
     compile_dir(join_path(__dirname, "std").replace(/\\/g, "/"), join_path(out_dir, "std"), {
         compile_mode: "library"
     });
 }
 
-if(compile_mode == "program" && !compiled_entry_point)
+if((compile_mode == "program" || compile_mode == "library") && !compiled_entry_point)
     console.log(" * NOTE: The entry file '" + entry_file + "' was not found, and was not compiled.");

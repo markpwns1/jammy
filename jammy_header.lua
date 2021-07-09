@@ -21,7 +21,10 @@ function ternary(a, b, c) if a then return b else return c end end
 
 function incrange(a, b, c)
     if b == nil and c == nil then return range(1, a+1)
-    else return range(a, b + math.sign(c), c) end
+    else 
+        c = c or 1
+        return range(a, b + math.sign(c), c) 
+    end
 end
 
 function range(a, b, c)
@@ -55,19 +58,6 @@ function prototype(super)
     return proto
 end
 
-
-function relative_path(a, b)
-    a, b = a:gsub("\\", "/"), b:gsub("\\", "/")
-    local a_parts, b_parts = { }, { }
-    for x in a:gmatch("[^/]+") do table.insert(a_parts, x) end
-    for x in b:gmatch("[^/]+") do table.insert(b_parts, x) end
-    for i, v in ipairs(b_parts) do 
-        if v == ".." then a_parts[#a_parts] = nil
-        else a_parts[#a_parts+1] = v end
-    end
-    return table.concat(a_parts, "/")
-end
-
 function luatable(...) return {...} end
 
 array = { }
@@ -82,3 +72,15 @@ function len(x) return #x end
 function bool(x) return not not x end
 
 function nop() end
+
+local m = debug.getmetatable(0) or { };
+
+m.times = function(self, f)
+    for i = 1, self, 1 do
+        f(i)
+    end
+end
+
+m.__index = m;
+
+debug.setmetatable(0, m);
