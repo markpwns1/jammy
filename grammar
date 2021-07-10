@@ -473,6 +473,10 @@ array "array" = "[" _ elements:expr_list? _ "]" {
     });
 }
 
+table_elements = head:table_element tail:(_ "," _ table_element)* {
+    return [ head, ...tail.map(x => x[3])];
+}
+
 table_element "table element" = key:identifier _ ":" _ value:expr {
     return {
         key: key,
@@ -486,9 +490,9 @@ my = "my" {
     });
 }
 
-table "table" = "{" _ entries:(table_element _ ","? _)* _ "}" {
+table "table" = "{" _ entries:(table_elements _ ","? _)? _ "}" {
     return ast("table", {
-        entries: array_of(entries).map(x => x[0])
+        entries: array_of(get_nth(entries, 0))
     });
 }
 
