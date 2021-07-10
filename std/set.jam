@@ -32,21 +32,22 @@ set.subset = (a, b) => {
 };
 
 set.equal_to = (a, b) => {
-    if a:size! == b:size!, => false;
+    if a:size! ~= b:size!, => false;
     for k, _ in pairs a._elements, if !(b._elements #k), => false;
     => true;
 };
 
+set.superset = (a, b) => b:subset a;
 set.strict_superset = (a, b) => b:strict_subset a;
 set.superset_eq = (a, b) => b:subset a;
 
 set.iter = () :=> {
     let n = 0;
     let elements = luatable!;
-    for k, _ in pairs my._elements {
+    for k, _ in pairs my._elements, {
         elements #(len elements + 1) = k;
         n = n + 1;
-    }
+    };
 
     let i = 0;
     => () => {
@@ -65,15 +66,36 @@ set.shallow_copy = () :=> set ...self:to_table!;
 
 set.clear = () :=> >> for x in self:iter!, my._elements #x = nil;
 
-// set.set_elements = () :=> 
+set.set_elements = t :=> {
+    self:clear!;
+    for item in t:iter!, my._elements #item = true;
+};
 
 set.__tostring = () :=> {
     let str = "{ ";
     let i, n = 0, table.length my._elements;
-    for k, _ in pairs my._elements {
+    for k, _ in pairs my._elements, {
         str = str .. tostring k;
-        i = i + 1
+        i = i + 1;
         if i < n, str = str .. ", ";
-    }
+    };
     => str .. " }";
+};
+
+set.union = (a, b) => {
+    let c = a:shallow_copy!;
+    for x in b:iter!, c._elements #x = true;
+    => c;
+};
+
+set.interset = (a, b) => {
+    let c = set!;
+    for x in a:iter!, if b._elements #x, c._elements #x = true;
+    => c;
+};
+
+set.difference = (a, b) => {
+    let c = a:shallow_copy!;
+    for x in b:iter!, c._elements #x = nil;
+    => c;
 };

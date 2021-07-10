@@ -152,11 +152,11 @@ match_case_stmt "match case" = ca:expr _ "=>" _ val:stmt {
     }
 }
 
-match_cases_stmt "list of match cases" = cases:( _ match_case_stmt _ ";"?)+ {
+match_cases_stmt "list of match cases" = cases:( _ match_case_stmt _ ";")+ {
     return cases.map(x => x[1]);
 }
 
-match_stmt "match statement" = "match" _ value:expr _ "," _ "{" _ cases:match_cases_stmt _ def:("else" _ stmt _ ";"?)? _ "}" {
+match_stmt "match statement" = "match" _ value:expr _ "," _ "{" _ cases:match_cases_stmt _ def:("else" _ stmt _ ";")? _ "}" {
     return ast("match_stmt", {
         value: value,
         cases: cases,
@@ -171,19 +171,19 @@ match_case_expr "match case" = ca:expr _ "=>" _ val:expr {
     }
 }
 
-match_cases_expr "list of match cases" = cases:( _ match_case_expr _ ","?)+ {
-    return cases.map(x => x[1]);
+match_cases_expr "list of match cases" = head:match_case_expr _ tail:("," _ match_case_expr)* {
+    return [ head, ...tail.map(x => x[2]) ];
 }
 
-match_expr "match expression" = "match" _ value:expr _ "," _  "{" _ cases:match_cases_expr _ def:("else" _ expr _ ";"?)? _ "}" {
+match_expr "match expression" = "match" _ value:expr _ "," _  "{" _ cases:match_cases_expr _ def:("," _ "else" _ expr)? _ "}" {
     return ast("match_expr", {
         value: value,
         cases: cases,
-        default: get_nth(def, 2)
+        default: get_nth(def, 4)
     });
 }
 
-for_in_stmt "for-in statement" = "for" _ vars:identifier_list _ "in" _ iter:expr _ ","? _ body:stmt {
+for_in_stmt "for-in statement" = "for" _ vars:identifier_list _ "in" _ iter:expr _ "," _ body:stmt {
     return ast("for_in_stmt", {
         variables: vars,
         iterator: iter,
@@ -191,7 +191,7 @@ for_in_stmt "for-in statement" = "for" _ vars:identifier_list _ "in" _ iter:expr
     });
 }
 
-block_expr "block" = "{" _ statements:(stmt _ ";"? _)+ _ "}" {
+block_expr "block" = "{" _ statements:(stmt _ ";" _)+ _ "}" {
     return ast("block_expr", {
         statements: statements.map(x => x[0])
     });
@@ -250,7 +250,7 @@ identifier_list "identifier list" = head:identifier tail:(_ "," _ identifier)* {
     ];
 }
 
-if_stmt "if statement" = "if" _ condition:expr _ ","? _ true_branch:stmt false_branch:(_ "else" _ stmt)? {
+if_stmt "if statement" = "if" _ condition:expr _ "," _ true_branch:stmt false_branch:(_ "else" _ stmt)? {
     return ast("if_stmt", {
         condition: condition,
         true_branch: true_branch,
@@ -258,7 +258,7 @@ if_stmt "if statement" = "if" _ condition:expr _ ","? _ true_branch:stmt false_b
     });
 }
 
-while_stmt "while statement" = "while" _ condition:expr _ ","? _ body:stmt {
+while_stmt "while statement" = "while" _ condition:expr _ "," _ body:stmt {
     return ast("while_stmt", {
         condition: condition,
         body: body
@@ -275,11 +275,11 @@ return_stmt "return statement" = "=>" _ v:(expr) {
     });
 }
 
-if_expr "if expression" = "if" _ condition:expr _ ","? _ true_branch:expr _ "else" _ false_branch:expr {
+if_expr "if expression" = "if" _ condition:expr _ "," _ true_branch:expr _ false_branch:("else" _ expr)? {
     return ast("if_expr", {
         condition: condition,
         true_branch: true_branch,
-        false_branch: false_branch
+        false_branch: get_nth(false_branch, 2)
     });
 }
 
@@ -369,7 +369,7 @@ index_object "index by field" =  "." _ name:identifier _ {
     });
 }
 
-index "object index chain" = left:factor _ indexes:(index_type_stmt)+ {
+index "object index chain" = left:factor _ indexes:(index_type)+ {
     return leftify(left, indexes);
 }
 

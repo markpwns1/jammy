@@ -259,7 +259,7 @@ evaluators.function = ast => {
         let variadicArg = ast.args.pop();
         ast.args.push("...");
         txt = "function(" + ast.args.join(", ") + ") ";
-        txt += variadicArg + " = {...} ";
+        txt += "local " + variadicArg + " = {...} ";
     }
     else {
         txt = "function(" + ast.args.join(", ") + ") ";
@@ -296,7 +296,7 @@ evaluators.if_stmt = ast => {
 evaluators.if_expr = ast => {
     return "(function() if " + evaluate(ast.condition) 
         + " then return " + evaluate(ast.true_branch) 
-        + " else return " + evaluate(ast.false_branch) + " end end)()";
+        + (ast.false_branch? (" else return " + evaluate(ast.false_branch)) : "") + " end end)()";
 }
 
 evaluators.while_stmt = ast => {
