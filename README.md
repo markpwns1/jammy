@@ -40,8 +40,16 @@ Jammy is a very wacky language, and quite unreadable, but at least it's fast to 
 ### Semantics
 Order of operations is abolished. All binary operators will be evaluated left-to-right. For example, `5 + 6 * 2` is equivalent to the following Lua code `(5 + 6) * 2`. Besides that, there are no semantic differences to Lua, only syntax differences and additional features.
 
-### Numbers, strings, booleans, nil
-These are pretty much exactly the same as in Lua, except numbers can only be in decimal format and strings are multiline by default.
+### Numbers, booleans, nil
+These are pretty much exactly the same as in Lua, except numbers can only be in decimal format.
+
+### Strings
+Strings in Jammy are multiline by default. You can include ${ ... } to automatically insert an expression into a string. The following is an example of a Jammy string:
+```
+"five plus
+six equals
+${5 + 6}"
+```
 
 ### Comments
 Single-line comments start with a `//` like in C-style languages. Multi-line comments similarly start with `/*` and end with `*/`. Nested multi-line comments are not supported (yet).
