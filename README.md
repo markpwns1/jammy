@@ -2,6 +2,8 @@
 
 Jammy is an original programming language written in NodeJS that transpiles to Lua, designed with speed of iteration as a priority. It's named Jammy because it's designed for writing Love2D games as fast as possible for game jams. Pull requests welcome!
 
+Note: it is expected that a Jammy programmer has a reasonable level of experience with Lua, because much of its behaviour is derived from Lua, and because runtime errors might sometimes require you digging through the compiled code.
+
 ## Installation
 - `git clone https://github.com/markpwns1/jammy`
 - `cd jammy`
@@ -47,23 +49,25 @@ Single-line comments start with a `//` like in C-style languages. Multi-line com
 ### Variables
 Variables are declared using the `let` statement. Any variable declared this way will be local.
 ```
-let a = 24
-let b, c, d = 1, 2, 3
-let e, f = returns_two_values!
+let a = 24;
+let b, c, d = 1, 2, 3;
+let e, f = returns_two_values!;
 ```
 If a variable already exists, it can be assigned a value literally the exact same way as a declaration, except you omit "let".
 ```
-a = 24
-b, c, d = 1, 2, 3
-e, f = returns_two_values!
+a = 24;
+b, c, d = 1, 2, 3;
+e, f = returns_two_values!;
 ```
 Assigning to a variable that does not exist will declare a global variable, like in Lua.
 
 ### Operators
 These are the exact same as Lua but with some minor differences:
-- `not` is now `!`
 - `and` is now `&&`
 - `or` is now `||`
+
+### Unary Operators
+Unary operators are the exact same as in Lua but `not` is now `!`. Also, **there cannot be a space between the operator and its value**. For example, `-5` is valid but `- 5` is not.
 
 ### Functions
 Functions are a value, and like other values, they can be assigned to variables. They are declared like so:
@@ -75,7 +79,7 @@ let add = (a, b) => a + b;
 let sum = numbers... => {
   let s = 0;
   for i, v in ipairs(numbers), s = s + v;
-  => v;
+  => s;
 };
 
 let sum_multiply = (a, numbers...) => a * sum(...numbers);
@@ -84,7 +88,7 @@ Notice how you can have any number of parameters. When the function takes one pa
 ```
 array.insert = x :=> {
   table.insert(self.elements);
-}
+};
 ```
 
 This is very important: **a function returns the expression directly after the arrow**. A function is not a subroutine (by default, at least). In the examples above, however, there are clearly classic-style functions, which perform multiple operations, like `array.insert` and `sum`. I will now explain this.
@@ -105,6 +109,7 @@ Some syntactic constructs in Jammy explicitly require an expression. A function 
 {
   let a = 5;
   let b = 6;
+  // more statements ...
   => a + b;
 }
 ```
@@ -113,11 +118,11 @@ Semicolons are optional but may help avoid grammatical ambiguity in rare cases (
 `>>` is shorthand for a block containing one statement. These two expressions are equivalent:
 ```
 let print_table = a => {
-  for i, v in ipairs(v), print x;
-}
+  for i, v in ipairs v, print x;
+};
 ```
 ```
-let print_array = a => >> for i, v in ipairs(v), print x
+let print_array = a => >> for i, v in ipairs a, print x;
 ```
 A `>>` block must **not** have a semicolon.
 
@@ -129,7 +134,7 @@ let x = {
   let a = 1;
   let b = 2;
   => a + b;
-}
+};
 
 print x;
 ```
@@ -148,8 +153,8 @@ If no arguments are to be supplied to a function, it can be called with either `
 
 If indexing an object, you can replace `.` with `:` to supply the object as the first parameter to the function you are calling. For example, the following expressions are equivalent:
 ```
-a.b:c!
-a.b.c(a.b)
+a.b:c 34
+a.b.c(a.b, 34)
 ```
 This is exactly the same as in Lua.
 
@@ -165,60 +170,67 @@ let x = if a == b, 1 else 2;
 ```
 Notice that when used as an expression, the `if` statement **must** contain an `else` branch. There is also a subtle difference between `if` used as a statement as opposed to an expression: as a statement, the body of each branch must be a statement, whereas as an expression, the body of each branch must be an expression. 
 
-The commas are totally optional, but might avoid grammatical ambiguity in some cases.
+The commas are obligatory.
 
 ### Match statements
 
 Match statements are used like so:
 ```
 let x = 5;
-match x {
+match x, {
   "hello" => print "goodbye";
   5 => print "x is five";
   else print "x is neither 'hello' nor 5";
 };
 
-print match x {
+print match x, {
   "hello" => "goodbye",
   5 => "x is five",
-  else "x is neither 'hello' nor 5
+  else "x is neither 'hello' nor 5"
 };
 ```
-Notice the subtle differences between `match` used as a statement as opposed to an expression. As a statement, the body of each case must be a statement, whereas as an expression, the body of each case must be an expression. Also, as a statement the cases are separated (optionally) with a semicolon, whereas as an expression they are separated (optionally) with a comma. 
+The `else` case is optional. Notice the subtle differences between `match` used as a statement as opposed to an expression. As a statement, the body of each case must be a statement, and they must end in a semucolon, whereas as an expression, the body of each case must be an expression and each case is separated by a comma.
 
 Also, the match cases need not be constant values. You can do things like
 ```
-match x {
+match x, {
   5 + 6 => // ...
   a! => // ...
-}
+};
 ```
 
 ### While loops
 Surely while loops need no introduction. In Jammy they can only be statements. They execute the statement directly after the condition.
 ```
 let i = 0;
-while i < 10 {
+let n = 10;
+while i < n, {
   print i;
   i = i + 1;
-}
+};
 ```
-There may be a comma between the condition and the body. 
+There may be a comma between the condition and the body to help avoid grammatical ambiguity. It would be wise to use the comma, since without the comma, the above code would not compile, as `{ print i; i = i + 1; }` would be interpreted as the first argument to the function `n`. 
 
 ### For-in loops
 For-in loops are pretty much identical to Lua's. They are statements in Jammy, not expressions.
 ```
-for i, v in ipairs(a), print v;
+for i, v in ipairs a, print v;
 ```
 The comma between the condition and the body are optional.
 
 Jammy has some generators that can be used with for-in loops. For example:
 ```
-for i in range(10), print i; // prints 0 to 9 inclusive
+for i in range 10, print i; // prints 0 to 9 inclusive
 for i in range(5, 10), print i; // prints 5 to 9 inclusive
 for i in range(20, 15, -2), print i; // prints 20 to 16 inclusive, going down by 2
 ```
-There also exists `incrange` which is `range` but the "end" value is inclusive. `incrange` also starts at 1 unless directed otherwise.
+There also exists `incrange` which is `range` but the "end" value is inclusive. `incrange` also starts at 1 unless directed otherwise. Again, be sure to include a comma whenever the body of the statement might be interpreted as the first argument to the generator function, like in the following incorrect code:
+```
+let zero_to_nine = range 10;
+for i in zero_to_nine {
+  print i;
+};
+```
 
 ### `break` and `continue`
 Within a loop, `break` can be used to stop the loop immediately, and `continue` can be used to stop the current iteration of the loop immediately. Basically, it works like in C-like languages.
@@ -259,8 +271,8 @@ You can do cool stuff with the array such as:
 ```
 print my_array #0 // prints A -- yes, arrays are zero-indexed
 print my_array // prints [ A, B, C ]
-print my_array:contains(2) // prints false
-my_array:pop() // removes the last element
+print my_array:contains 2 // prints false
+my_array:pop! // removes the last element
 ```
 Feel free to inspect the source code of `std/array.jam` to see its full functionality. 
 
@@ -273,14 +285,15 @@ Any standard Lua array-like table can be unpacked, equivalent to calling the Lua
 ```
 let x = luatable(1, 2, 3);
 let add_three = (a, b, c) => a + b + c;
-print add_three(...x); // prints 6
+print add_three ...x; // prints 6
 ```
 
 ### Modules
 You can require modules using the following syntax:
 ```
-use "std.array"
-let x = use ("../../file")
+use "std.array";
+
+let x = use "../../file";
 ```
 The `use` statement is equivalent to Lua's `require` except for one thing: **the use statement works relative to the current file**. The use statement also considers "/" and "." to be equivalent.
 
@@ -295,26 +308,26 @@ vec2.constructor = (x, y) :=> >> my.x, my.y = x, y;
 
 vec2.magnitude = () :=> math.sqrt(my.x * my.x + my.y * my.y);
 
-vec2.__tostring = () :=> "(" .. tostring(my.x) .. ", " .. tostring(my.y) .. ")";
+vec2.__tostring = () :=> "(" .. tostring my.x .. ", " .. tostring my.y .. ")";
 
 => vec2;
 ```
 `vec2` can then be used in another file like so:
 ```
-let vec2 = use("vec2");
+let vec2 = use "vec2";
 let v = vec2(4, 5);
 print v;
 print v:magnitude!;
 ```
 
 ### Tables
-Jammy's syntax for tables is literally identical to Javascript's.
+Jammy's syntax for tables is literally identical to Javascript's. That is all.
 ```
 let x = {
   a: 5,
-  b: 6,
+  b: "bee",
   c: () => 7
-}
+};
 ```
 
 ### Table length
@@ -335,10 +348,12 @@ To index an object where the key is anything but an variable-style string, you c
 let a = luatable(
   {
     y: 5
-  }
+  },
+  7,
+  8
 );
 
-print a #1 #"y" // prints 5
+print a #1 #"y"; // prints 5
 ```
 
 ### `my` and `self`
@@ -351,31 +366,32 @@ To turn a truthy/falsy value to an explicit boolean, use `!!my_truthy_value`. It
 The following is the source code for Jammy's array class in the standard library.
 ```
 
-array = prototype!
 
-array.constructor = elements... :=> >> self._elements = elements;
+array = prototype!;
 
-array.new = elements... => array(...elements);
+array.constructor = elements... :=> >> my._elements = elements;
 
-array.from_table = t => array(...t);
+array.new = elements... => array ...elements;
+
+array.from_table = t => array ...t;
 
 array.__index = key :=> 
-    if type(key) == "number", my._elements#(key + 1) 
+    if type key == "number", my._elements #(key + 1) 
     else if key == "length", len my._elements
-    else array #key
+    else array #key;
 
 array.__newindex = (key, value) :=> >> 
-    if type(key) == "number", 
+    if type key == "number", 
         if (key < 0) || (key > my.length), 
-            error("Attempt to set out-of-bounds index in array: " .. key .. " -- Valid bounds are [0, " .. my.length .. ")")
-        else my._elements#(key + 1) = value
-    else rawset(self, key, value)
+            error "Attempt to set out-of-bounds index in array: " .. key .. " -- Valid bounds are [0, " .. my.length .. ")"
+        else my._elements #(key + 1) = value
+    else rawset(self, key, value);
 
 array.__tostring = () :=> {
     let str = "[ ";
     let n = len my._elements;
-    for i in incrange(n) {
-        str = str .. tostring(my._elements#i);
+    n:times () => {
+        str = str .. tostring my._elements #i;
         if i < n, str = str .. ", ";
     }
     => str .. " ]";
@@ -400,12 +416,12 @@ array.ipairs = () :=> {
 };
 
 array.first_index_of = item :=> >> 
-    for i in incrange(len my._elements) 
-        if my._elements #i == item, => i - 1
+    for i in incrange len my._elements
+        if my._elements #i == item, => i - 1;
 
 array.last_index_of = item :=> >> 
     for i in incrange(len my._elements, 1, -1)
-        if my._elements #i == item, => i - 1
+        if my._elements #i == item, => i - 1;
 
 array.insert = (i, item) :=> >> table.insert(my._elements, i, item);
 
@@ -425,19 +441,19 @@ array.pop = () :=> {
     => item;
 };
 
-array.remove_at = i :=> table.remove(my._elements, i + 1)
+array.remove_at = i :=> table.remove(my._elements, i + 1);
 
-array.remove = item :=> >> for i, v in ipairs(my._elements) if v == item, table.remove(my._elements, i);
+array.remove = item :=> >> for i, v in ipairs my._elements if v == item, table.remove(my._elements, i);
 
-array.contains = item :=> !! >> for _, v in ipairs(my._elements) if item == v, => true;
+array.contains = item :=> bool >> for _, v in ipairs my._elements if item == v, => true;
 
 array.get_elements = () :=> my._elements;
 
-array.shallow_copy = () :=> array.from_table(my._elements);
+array.shallow_copy = () :=> array.from_table my._elements;
 
 array.equal_to = (a, b) => {
     if len a._elements ~= len b._elements, => false;
-    for i in incrange(len a._elements) 
+    for i in incrange len a._elements
         if (a._elements #i) ~= (b.elements #i), => false;
     => true;
 };
@@ -454,7 +470,7 @@ array.slice = (start_index, end_index) :=> {
         j = j + 1;
     }
 
-    => array.from_table(sliced_table)
+    => array.from_table sliced_table;
 };
 
 array.concat = (a, b) => {
@@ -464,40 +480,40 @@ array.concat = (a, b) => {
     => c;
 };
 
-array.clear = () :=> >> for i in incrange(len my._elements), my._elements #i = nil;
+array.clear = () :=> >> for i in incrange len my._elements, my._elements #i = nil;
 
 array.first = () :=> my._elements #1;
 
-array.last = () :=> my._elements #(len my._elements)
+array.last = () :=> my._elements #(len my._elements);
 
 array.head = array.first;
 
-array.tail = () :=> self:slice(1)
+array.tail = () :=> self:slice 1;
 
-array.get = i :=> my._elements #(i + 1)
+array.get = i :=> my._elements #(i + 1);
 
 array.set_elements = t :=> {
     let t_n, my_n = len t._elements, len my._elements;
     let i = 1;
 
-    while i <= t_n {
+    while i <= t_n, {
         my._elements #i = t._elements #i;
         i = i + 1;
-    }
+    };
 
-    while i <= my_n {
+    while i <= my_n, {
         my._elements #i = nil;
         i = i + 1;
-    }
+    };
 };
 
 array.set = (i, item) :=> {
     if (i < 0) || (i >= my.length), 
-        error("Attempt to set out-of-bounds index in array: " .. index .. " -- Valid bounds are [0, " .. my.length .. ")")
+        error "Attempt to set out-of-bounds index in array: " .. index .. " -- Valid bounds are [0, " .. my.length .. ")"
     else {
         my._elements #(i + 1) = item;
         => item;
-    }
+    };
 };
 
 ```
