@@ -10,7 +10,7 @@ Note: it is expected that a Jammy programmer has a reasonable level of experienc
 - `npm install`
 
 ## Usage
-On windows, you can run `jammy.bat` (or just `jammy`), and on Linux you can run `jammy.sh`. Regardless, you should be able to run `node jammy.js`. There are two main "modes" in which the Jammy compiler operates.
+On Windows, you can run `jammy.bat` (or just `jammy`). Regardless of your operating system, you should be able to run `node jammy.js`. There are three main "modes" in which the Jammy compiler operates.
 
 ### Program mode
 Run `jammy program <src dir> <out dir> [-e <entry file>]` to compile an entire directory. You can then run this file by running the entry file in lua. For example:
@@ -78,16 +78,16 @@ let add = (a, b) => a + b;
 
 let sum = numbers... => {
   let s = 0;
-  for i, v in ipairs(numbers), s = s + v;
+  for i, v in ipairs numbers, s = s + v;
   => s;
 };
 
-let sum_multiply = (a, numbers...) => a * sum(...numbers);
+let sum_multiply = (a, numbers...) => a * sum ...numbers;
 ```
 Notice how you can have any number of parameters. When the function takes one parameter, it the parameter does not need to be parenthesized. A function can take variadic arguments if its last parameter ends with `...`. You can replace `=>` with `:=>` to prepend `self` to the list of parameters. For example,
 ```
 array.insert = x :=> {
-  table.insert(self.elements);
+  table.insert my.elements;
 };
 ```
 
@@ -100,11 +100,11 @@ Some syntactic constructs in Jammy explicitly take in an expression, or explicit
 
 ### Return statements
 Return statements are made like so:
-```=> <expression>```
+```=> <expression>;```
 A return statement *must* return *one* expression. If you do not want to return a value, simply return `nil`. If you want to return multiple values, like Lua does, then return a tuple (this readme contains futher information on tuples).
 
 ### Turning statements into expressions
-Some syntactic constructs in Jammy explicitly require an expression. A function is an example of such a construct. A **block** may be used to execute statements and then return a value. Therefore a block is itself an expression. A block is defined like so:
+Some syntactic constructs in Jammy explicitly require an expression. A function is an example of such a construct. A **block** may be used to execute statements and then return a value. A block can be used as a statement or an expression, meaning it can be used anywhere. A block is defined like so:
 ```
 {
   let a = 5;
@@ -115,7 +115,7 @@ Some syntactic constructs in Jammy explicitly require an expression. A function 
 ```
 Semicolons are optional but may help avoid grammatical ambiguity in rare cases (I can't think of any off the top of my head, to be honest). A block must have at least one statement inside it, or else it will be interpreted as an empty table.
 
-`>>` is shorthand for a block containing one statement. These two expressions are equivalent:
+`>>` is shorthand for a block containing one statement. These two statements are equivalent:
 ```
 let print_table = a => {
   for i, v in ipairs v, print x;
@@ -153,8 +153,8 @@ If no arguments are to be supplied to a function, it can be called with either `
 
 If indexing an object, you can replace `.` with `:` to supply the object as the first parameter to the function you are calling. For example, the following expressions are equivalent:
 ```
-a.b:c 34
-a.b.c(a.b, 34)
+a.b:c(1, 2, 3)
+a.b.c(a.b, 1, 2, 3)
 ```
 This is exactly the same as in Lua.
 
@@ -166,9 +166,11 @@ if a == b, x = 1;
 
 if a == b, x = 1 else x = 2;
 
-let x = if a == b, 1 else 2;
+let x = if a == b, 1;
+
+let y = if a == b, 1 else 2;
 ```
-Notice that when used as an expression, the `if` statement **must** contain an `else` branch. There is also a subtle difference between `if` used as a statement as opposed to an expression: as a statement, the body of each branch must be a statement, whereas as an expression, the body of each branch must be an expression. 
+When used as an expression, if there is no `else` branch, it will return `nil` in that case. There is also a subtle difference between `if` used as a statement as opposed to an expression: as a statement, the body of each branch must be a statement, whereas as an expression, the body of each branch must be an expression. 
 
 The commas are obligatory.
 
@@ -224,12 +226,19 @@ for i in range 10, print i; // prints 0 to 9 inclusive
 for i in range(5, 10), print i; // prints 5 to 9 inclusive
 for i in range(20, 15, -2), print i; // prints 20 to 16 inclusive, going down by 2
 ```
-There also exists `incrange` which is `range` but the "end" value is inclusive. `incrange` also starts at 1 unless directed otherwise. Again, be sure to include a comma whenever the body of the statement might be interpreted as the first argument to the generator function, like in the following incorrect code:
+There also exists `range_inc` which is `range` but the "end" value is inclusive. `range_inc` also starts at 1 unless directed otherwise. There is also a namespace called `std.iter` which you can use for some useful iterating tools. Take the following example:
 ```
-let zero_to_nine = range 10;
-for i in zero_to_nine {
-  print i;
-};
+use "std.iter";
+
+// n:times(fn) is a function which executes the given function n times
+// supplying i to the function. The two below statements print the numbers from 0 to 9.
+10:times i => print i;
+10:times print;
+
+// prints 5 to 9.
+5:to(10, i => print i);
+
+// Each of these functions have _inc versions with inclusive boundaries
 ```
 
 ### `break` and `continue`
@@ -261,6 +270,11 @@ Any expression can return multiple values by using a tuple. Tuples are declared 
 let a, b = if true, (1, 2) else (3, 4);
 print(a, b); // prints 5 6
 ```
+Note that tuples are NOT a data structure, they are simply a mechanism for returning multiple values. The following does not do what one would expect:
+```
+let x = if true, (5, 6);
+```
+In the above example, `x` becomes 5 and 6 is discarded.
 
 ### Arrays
 The standard library contains a handy `array` class. You can declare arrays using the following syntax:
@@ -276,14 +290,14 @@ my_array:pop! // removes the last element
 ```
 Feel free to inspect the source code of `std/array.jam` to see its full functionality. 
 
-The important part about this, however, is that **arrays are not tables**, they are a class. If you just want a normal Lua array-like table, you can use the function `luatable(elements...)`.
+The important part about this, however, is that **arrays are not tables**, they are a class. If you just want a normal Lua array-like table, you can use the function `tbl(elements...)`.
 
 Trying to create an array, however, will throw an error unless you've imported `std.array` using a `use` (or `require`) statement.
 
 ### Unpack operator
 Any standard Lua array-like table can be unpacked, equivalent to calling the Lua `table.unpack` function, using `...my_table`. For example:
 ```
-let x = luatable(1, 2, 3);
+let x = tbl(1, 2, 3);
 let add_three = (a, b, c) => a + b + c;
 print add_three ...x; // prints 6
 ```
@@ -321,7 +335,7 @@ print v:magnitude!;
 ```
 
 ### Tables
-Jammy's syntax for tables is literally identical to Javascript's. That is all.
+Jammy's syntax for tables is identical to Javascript's, only field names cannot be wrapped in quotation marks.
 ```
 let x = {
   a: 5,
@@ -357,16 +371,14 @@ print a #1 #"y"; // prints 5
 ```
 
 ### `my` and `self`
-`my` is an alias for Lua's `self`. Jammy also has `self`. You can use either of them interchangeably.
+Jammy has two keywords, `my` and `self`, and they are both equivalent to Lua's `self`. You can use either of them interchangeably.
 
 ### Resolving truthy/falsy values
-To turn a truthy/falsy value to an explicit boolean, use `!!my_truthy_value`. It is equivalent to `not not my_truthy_value` in Lua.
+To turn a truthy/falsy value to an explicit boolean, use `bool my_truthy_value`. It is equivalent to `not not my_truthy_value` in Lua.
 
 ## Example
 The following is the source code for Jammy's array class in the standard library.
 ```
-
-
 array = prototype!;
 
 array.constructor = elements... :=> >> my._elements = elements;
@@ -390,10 +402,10 @@ array.__newindex = (key, value) :=> >>
 array.__tostring = () :=> {
     let str = "[ ";
     let n = len my._elements;
-    n:times () => {
+    for i in range_inc n, {
         str = str .. tostring my._elements #i;
         if i < n, str = str .. ", ";
-    }
+    };
     => str .. " ]";
 };
 
@@ -416,11 +428,11 @@ array.ipairs = () :=> {
 };
 
 array.first_index_of = item :=> >> 
-    for i in incrange len my._elements
+    for i in range_inc len my._elements,
         if my._elements #i == item, => i - 1;
 
 array.last_index_of = item :=> >> 
-    for i in incrange(len my._elements, 1, -1)
+    for i in range_inc(len my._elements, 1, -1),
         if my._elements #i == item, => i - 1;
 
 array.insert = (i, item) :=> >> table.insert(my._elements, i, item);
@@ -443,9 +455,10 @@ array.pop = () :=> {
 
 array.remove_at = i :=> table.remove(my._elements, i + 1);
 
-array.remove = item :=> >> for i, v in ipairs my._elements if v == item, table.remove(my._elements, i);
+array.remove = item :=> >> for i, v in ipairs my._elements, if v == item, table.remove(my._elements, i);
 
-array.contains = item :=> bool >> for _, v in ipairs my._elements if item == v, => true;
+array.contains = item :=> bool >> for _, v in ipairs my._elements, if item == v, => true;
+array.has = array.contains;
 
 array.get_elements = () :=> my._elements;
 
@@ -453,22 +466,22 @@ array.shallow_copy = () :=> array.from_table my._elements;
 
 array.equal_to = (a, b) => {
     if len a._elements ~= len b._elements, => false;
-    for i in incrange len a._elements
+    for i in range_inc len a._elements,
         if (a._elements #i) ~= (b.elements #i), => false;
     => true;
 };
 
 array.slice = (start_index, end_index) :=> {
-    let sliced_table = luatable!;
+    let sliced_table = tbl!;
     start_index = start_index + 1;
 
-    if end_index == nil >> end_index = len self._elements
+    if end_index == nil, end_index = len self._elements;
 
     let j = 1;
-    for i in incrange(start_index, end_index) {
+    for i in range_inc(start_index, end_index), {
         sliced_table #j = my._elements #i;
         j = j + 1;
-    }
+    };
 
     => array.from_table sliced_table;
 };
@@ -480,7 +493,7 @@ array.concat = (a, b) => {
     => c;
 };
 
-array.clear = () :=> >> for i in incrange len my._elements, my._elements #i = nil;
+array.clear = () :=> >> for i in range_inc len my._elements, my._elements #i = nil;
 
 array.first = () :=> my._elements #1;
 
@@ -507,6 +520,9 @@ array.set_elements = t :=> {
     };
 };
 
+array.each_i = f :=> >> for i, v in ipairs(my._elements), f(i, v); 
+array.each = f :=> >> for i, v in ipairs(my._elements), f v; 
+
 array.set = (i, item) :=> {
     if (i < 0) || (i >= my.length), 
         error "Attempt to set out-of-bounds index in array: " .. index .. " -- Valid bounds are [0, " .. my.length .. ")"
@@ -515,5 +531,4 @@ array.set = (i, item) :=> {
         => item;
     };
 };
-
 ```
