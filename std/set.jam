@@ -101,3 +101,5 @@ set.difference = (a, b) => {
     for x in b:iter!, c._elements #x = nil;
     => c;
 };
+
+set.unpack = () :=> ...self:to_table!;
