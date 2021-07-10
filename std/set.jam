@@ -43,7 +43,7 @@ set.superset_eq = (a, b) => b:subset a;
 
 set.iter = () :=> {
     let n = 0;
-    let elements = luatable!;
+    let elements = tbl!;
     for k, _ in pairs my._elements, {
         elements #(len elements + 1) = k;
         n = n + 1;
@@ -57,7 +57,7 @@ set.iter = () :=> {
 };
 
 set.to_table = () :=> {
-    let t = luatable!;
+    let t = tbl!;
     for k, _ in pairs my._elements, t #(len t + 1) = k;
     => t;
 };
@@ -81,6 +81,8 @@ set.__tostring = () :=> {
     };
     => str .. " }";
 };
+
+set.each = f :=> >> for k, v in pairs(my._elements), f k;
 
 set.union = (a, b) => {
     let c = a:shallow_copy!;

@@ -13,13 +13,9 @@ end
 unpack = unpack or table.unpack
 
 function lt(a, b) return a < b end
-function lte(a, b) return a <= b end
 function gt(a, b) return a > b end 
-function gte(a, b) return a >= b end 
 
-function ternary(a, b, c) if a then return b else return c end end
-
-function incrange(a, b, c)
+function range_inc(a, b, c)
     if b == nil and c == nil then return range(1, a+1)
     else 
         c = c or 1
@@ -58,29 +54,15 @@ function prototype(super)
     return proto
 end
 
-function luatable(...) return {...} end
+function tbl(...) return {...} end
 
 array = { }
 array.new = function (...)
     error("Attempted to use an array without importing std.array. Either import std.array with `use \"std.array\";` or use luatable(...) in place of your array.")
 end
 
-try = pcall
-
 function len(x) return #x end
-
 function bool(x) return not not x end
-
 function nop() end
 
-local m = debug.getmetatable(0) or { };
 
-m.times = function(self, f)
-    for i = 1, self, 1 do
-        f(i)
-    end
-end
-
-m.__index = m;
-
-debug.setmetatable(0, m);

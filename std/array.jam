@@ -22,7 +22,7 @@ array.__newindex = (key, value) :=> >>
 array.__tostring = () :=> {
     let str = "[ ";
     let n = len my._elements;
-    n:times i => {
+    for i in range_inc n, {
         str = str .. tostring my._elements #i;
         if i < n, str = str .. ", ";
     };
@@ -48,11 +48,11 @@ array.ipairs = () :=> {
 };
 
 array.first_index_of = item :=> >> 
-    for i in incrange len my._elements,
+    for i in range_inc len my._elements,
         if my._elements #i == item, => i - 1;
 
 array.last_index_of = item :=> >> 
-    for i in incrange(len my._elements, 1, -1),
+    for i in range_inc(len my._elements, 1, -1),
         if my._elements #i == item, => i - 1;
 
 array.insert = (i, item) :=> >> table.insert(my._elements, i, item);
@@ -86,19 +86,19 @@ array.shallow_copy = () :=> array.from_table my._elements;
 
 array.equal_to = (a, b) => {
     if len a._elements ~= len b._elements, => false;
-    for i in incrange len a._elements,
+    for i in range_inc len a._elements,
         if (a._elements #i) ~= (b.elements #i), => false;
     => true;
 };
 
 array.slice = (start_index, end_index) :=> {
-    let sliced_table = luatable!;
+    let sliced_table = tbl!;
     start_index = start_index + 1;
 
     if end_index == nil, end_index = len self._elements;
 
     let j = 1;
-    for i in incrange(start_index, end_index), {
+    for i in range_inc(start_index, end_index), {
         sliced_table #j = my._elements #i;
         j = j + 1;
     };
@@ -113,7 +113,7 @@ array.concat = (a, b) => {
     => c;
 };
 
-array.clear = () :=> >> for i in incrange len my._elements, my._elements #i = nil;
+array.clear = () :=> >> for i in range_inc len my._elements, my._elements #i = nil;
 
 array.first = () :=> my._elements #1;
 
@@ -139,6 +139,9 @@ array.set_elements = t :=> {
         i = i + 1;
     };
 };
+
+array.each_i = f :=> >> for i, v in ipairs(my._elements), f(i, v); 
+array.each = f :=> >> for i, v in ipairs(my._elements), f v; 
 
 array.set = (i, item) :=> {
     if (i < 0) || (i >= my.length), 
