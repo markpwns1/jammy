@@ -53,6 +53,10 @@ evaluators.string = ast => {
     return "\"" + ast.value + "\"";
 }
 
+evaluators.fstring = ast => {
+    return "string.format(\"" + ast.value + "\", " + ast.format_values.map(x => "tostring(" + evaluate(x) + ")").join(", ") + ")";
+}
+
 evaluators.variable = ast => {
     return ast.name;
 }

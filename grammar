@@ -404,25 +404,47 @@ variable "variable" = name:identifier {
     });
 }
 
-string "string" = '"' chars:string_char* '"' { 
-    return ast("string", {
-        value: chars.join('').replace(/\n/g, "\\n").replace(/\r/g, "")
+string "string" = '"' parts:string_char* '"' { 
+    let str = "";
+    let ast_type = "string";
+    let format_values = [ ];
+
+    for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (typeof part === "string") {
+            str += part;
+        }
+        else {
+            format_values.push(part.value);
+            str += "%s";
+            ast_type = "fstring";
+        }
+    }
+
+    return ast(ast_type, {
+        value: str.replace(/\n/g, "\\n").replace(/\r/g, ""),
+        format_values: format_values
     });
 }
 
 string_char
-  = !('"' / "\\") char:. { return char; }
-  / "\\" sequence:. { return "\\" + sequence; }
+    = !('"' / "\\" / "$") char:. { return char; }
+    / "\\" sequence:. { return "\\" + sequence; }
+    / "${" _ value: expr _ "}" { 
+        return {
+            value: value
+        }
+    }
 
 string_escape
-  = '"'
-  / "\\"
-  / "b"  { return "\b";   }
-  / "f"  { return "\f";   }
-  / "n"  { return "\n";   }
-  / "r"  { return "\r";   }
-  / "t"  { return "\t";   }
-  / "v"  { return "\x0B"; }
+    = '"'
+    / "\\"
+    / "b"  { return "\b";   }
+    / "f"  { return "\f";   }
+    / "n"  { return "\n";   }
+    / "r"  { return "\r";   }
+    / "t"  { return "\t";   }
+    / "v"  { return "\x0B"; }
 
 identifier "identifier" = !(KEYWORDS !([_0-9a-zA-Z])) x:$([_a-zA-Z][_0-9a-zA-Z]*) {
     return x;
