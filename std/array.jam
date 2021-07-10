@@ -15,7 +15,7 @@ array.__index = key :=>
 array.__newindex = (key, value) :=> >> 
     if type key == "number", 
         if (key < 0) || (key > my.length), 
-            error "Attempt to set out-of-bounds index in array: " .. key .. " -- Valid bounds are [0, " .. my.length .. ")"
+            error "Attempt to set out-of-bounds index in array: ${key} -- Valid bounds are [0, ${my.length})"
         else my._elements #(key + 1) = value
     else rawset(self, key, value);
 
@@ -145,7 +145,7 @@ array.each = f :=> >> for i, v in ipairs(my._elements), f v;
 
 array.set = (i, item) :=> {
     if (i < 0) || (i >= my.length), 
-        error "Attempt to set out-of-bounds index in array: " .. index .. " -- Valid bounds are [0, " .. my.length .. ")"
+        error "Attempt to set out-of-bounds index in array: ${i} -- Valid bounds are [0, ${my.length})"
     else {
         my._elements #(i + 1) = item;
         => item;

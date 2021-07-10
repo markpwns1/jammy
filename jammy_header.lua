@@ -56,6 +56,8 @@ end
 
 function tbl(...) return {...} end
 
+function ternary(c, t, f) if c then return t else return f end end
+
 array = { }
 array.new = function (...)
     error("Attempted to use an array without importing std.array. Either import std.array with `use \"std.array\";` or use luatable(...) in place of your array.")
