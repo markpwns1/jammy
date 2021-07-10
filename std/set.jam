@@ -90,7 +90,7 @@ set.union = (a, b) => {
     => c;
 };
 
-set.interset = (a, b) => {
+set.intersect = (a, b) => {
     let c = set!;
     for x in a:iter!, if b._elements #x, c._elements #x = true;
     => c;
