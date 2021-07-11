@@ -355,7 +355,7 @@ vec3.constructor = (x, y, z) :=> {
   my.z = z;
 };
 
-vec3.square_magnitude () :=> my.super.square_magnitude(self) + (my.z * my.z);
+vec3.square_magnitude () :=> my.super.square_magnitude self + (my.z * my.z);
 
 vec3.__tostring = () :=> "(${my.x}, ${my.y}, ${my.z})";
 
