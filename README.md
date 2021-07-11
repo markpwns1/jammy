@@ -353,7 +353,7 @@ let vec3 = extend vec2;
 vec3.constructor = (x, y, z) :=> {
   my.super.constructor(self, x, y);
   my.z = z;
-}
+};
 
 vec3.square_magnitude () :=> my.super.square_magnitude(self) + (my.z * my.z);
 
