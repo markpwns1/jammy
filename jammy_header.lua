@@ -37,6 +37,8 @@ function range(a, b, c)
     end
 end
 
+function nop() end
+
 function prototype(super)
     local proto = { super = super }
     for k, v in pairs(super or { }) do
@@ -45,14 +47,17 @@ function prototype(super)
     local proto_mt = {
         __call = function(self, ...)
             local instance = { }
-            proto.constructor(instance, ...)
-            return setmetatable(instance, proto)
+            do setmetatable(instance, proto) end
+            (instance.constructor or nop)(instance, ...);
+            return instance
         end
     }
     setmetatable(proto, proto_mt)
     proto.__index = proto
     return proto
 end
+
+extend = prototype
 
 function tbl(...) return {...} end
 
@@ -65,6 +70,5 @@ end
 
 function len(x) return #x end
 function bool(x) return not not x end
-function nop() end
 
 
