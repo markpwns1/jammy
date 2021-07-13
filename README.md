@@ -30,7 +30,7 @@ Run `jammy library src out` to compile an entire directory *as a library.* This 
 ### Compiler flags
 - `-V, --version` output the version number
 - `-e, --entry <file>` Program mode only. Specifies the entry point of the program (default: "main.jam")
-- `-s, --no-std` Copies the jammy standard library
+- `-s, --no-std` Doesn't compile and include the Jammy standard library
 - `-m, --minify` Minifies compiled files (including Lua files)
 - `-h, --help` display help for command
 
