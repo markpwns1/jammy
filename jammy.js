@@ -25,7 +25,7 @@ const scopes = [ ];
 
 const current_scope = () => scopes[scopes.length - 1];
 
-
+let current_filename;
 
 let output = "";
 
@@ -187,12 +187,13 @@ evaluators.match_stmt = ast => {
     return txt + " end";
 }
 
-evaluators.match_expr = ast => {
-    let txt = "(function() local __match_val = " + evaluate(ast.value) + "; " + ast.cases.map(x => "if (__match_val) == (" + evaluate(x.case) + ") then return " + evaluate(x.value) + " else").join("")
+evaluators.match_expr = (ast, simplify = false) => {
+    let txt = "local __match_val = " + evaluate(ast.value) + "; ";
+    txt += ast.cases.map(x => "if __match_val == (" + evaluate(x.case) + ") then " + evaluate_functiony(x.value) + " else").join("")
     if(ast.default) {
-        txt += " return " + evaluate(ast.default);
+        txt += " " + evaluate_functiony(ast.default);
     }
-    return txt + " end end)()";
+    return to_expr(txt + " end", simplify);
 }
 
 const replace_all = (str, from, to) => {
@@ -233,40 +234,149 @@ const do_loop_body = (ast) => {
 }
 
 evaluators.for_in_stmt = ast => {
-    return "for " + ast.variables.join(", ") + " in " + evaluate(ast.iterator) + " do " + do_loop_body(ast.body) + " end";
-
-    // return local __broken = false; repeat " + evaluate(ast.body) + " until true; if __broken then break end; end"; 
+    // console.log(ast);
+    if(ast.iterator.type == "method_call" 
+    && ast.iterator.left.type == "variable"
+    && ast.iterator.args.length > 0
+    && ast.iterator.args.length < 4
+    && (ast.iterator.left.name == "range_inc"
+    || ast.iterator.left.name == "range")) {
+        
+        if(ast.iterator.args.length == 1) {
+            if(ast.iterator.left.name == "range") {
+                return "for " + ast.variables[0] + " = 0, ((" + evaluate(ast.iterator.args[0]) + ")-1) do " + do_loop_body(ast.body) + " end";
+            }
+            else {
+                return "for " + ast.variables[0] + " = 1, " + evaluate(ast.iterator.args[0]) + " do " + do_loop_body(ast.body) + " end";
+            }
+        }
+        else if(ast.iterator.args.length == 2) {
+            if(ast.iterator.left.name == "range") {
+                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-1) do " + do_loop_body(ast.body) + " end";
+            }
+            else {
+                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", " + evaluate(ast.iterator.args[1]) + " do " + do_loop_body(ast.body) + " end";
+            }
+        }
+        else if(ast.iterator.args.length == 3) {
+            if(ast.iterator.left.name == "range") {
+                let incr = evaluate(ast.iterator.args[2]);
+                if(incr == "1") {
+                    return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-1) do " + do_loop_body(ast.body) + " end";
+            
+                }
+                else if(incr == "-(1)") {
+                    return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")+1), -1 do " + do_loop_body(ast.body) + " end";
+                }
+                else {
+                    return "local __incr = " + incr + "; for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-math.sign(__incr)), __incr do " + do_loop_body(ast.body) + " end";
+                }
+            }
+            else {
+                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", " + evaluate(ast.iterator.args[1]) + ", " + evaluate(ast.iterator.args[2]) + " do " + do_loop_body(ast.body) + " end";
+            }
+        }
+    }
+    else {
+        return "for " + ast.variables.join(", ") + " in " + evaluate(ast.iterator) + " do " + do_loop_body(ast.body) + " end";
+    }
 };
 
-// const USE_FEATURES = {
-//     "arrays": "local array = require('std."
-// }
+
+const cached_modules = { };
+
+const get_import_params = p => {
+
+    if(!p.endsWith(".jam")) return { };
+    if(cached_modules[p]) return cached_modules[p];
+    
+    const file_contents = fs.readFileSync(p, "utf-8").trim();
+    if(!file_contents.startsWith("/** import_parameters")) {
+        cached_modules[p] = { };
+        return;
+    }
+
+    let i = 21;
+    let content = "";
+    while ((i < file_contents.length - 1) && (file_contents[i] != "*" || file_contents[i + 1] != "/")) {
+        content += file_contents[i];
+        i++;
+    }
+
+    let parsed = { };
+    try { 
+        parsed = JSON.parse(content); 
+    } catch { };
+    return parsed;
+};
 
 evaluators.use = ast => {
-    return "__use(" + evaluate(ast.path) + ")"
+    const lua_path = without_file_extension(ast.path.value).toString().replace(/\\/g, '/');
+    const real_path = join_path(__dirname, ast.path.value);
+    const params = get_import_params(real_path);
+
+    let txt = "";
+    const the_import = ast.path.value.startsWith("std/")? 
+        `require(path_join(__root_dir, "${lua_path}"):gsub(\"/\", \".\"))`
+        : `import("${lua_path}")`;
+    
+    if(params.set && params.set.length > 0) {
+        txt += "local " + params.set.join(", ") + " = __import(" + (params.set.length) + ", {" + params.set.join(", ") + "}, " + the_import + ");" + params.set.map(x => "__env." + x).join(", ") + " = " + params.set.join(", ");
+    }
+    else {
+        txt += the_import;
+    }
+
+    if(params.append) {
+        txt += ";" + params.append;
+    }
+
+    return txt;
 }
 
 evaluators.resume = ast => {
     return "coroutine.resume(" + [ evaluate(ast.coroutine), ...ast.arguments.map(x => evaluate(x)) ].join(", ") + ")";
 };
 
+const SIMPLIFY_IF_RETURNING = [
+    "block_expr",
+    "if_expr",
+    "try_expr",
+    "match_expr"
+];
+
 const evaluate_functiony = ast => {
-    return (ast.type == "block_expr")? evaluate(ast, true) : ("return " + evaluate(ast));
+    return SIMPLIFY_IF_RETURNING.includes(ast.type)? evaluate(ast, true) : ("return " + evaluate(ast));
 };
 
+const BAD_SELF_TEXT = `bad argument 'self' to `;
 evaluators.function = ast => {
-    if(ast.takesSelf)
-        ast.args.unshift("self");
+    if(ast.takesSelf) {
+        ast.args.unshift({ name: "self" });
+    }
     
     let txt;
+
     if(ast.variadic) {
         let variadicArg = ast.args.pop();
-        ast.args.push("...");
-        txt = "function(" + ast.args.join(", ") + ") ";
-        txt += "local " + variadicArg + " = {...} ";
+        ast.args.push({ name: "..." });
+        txt = "function(" + ast.args.map(x => x.name).join(", ") + ") ";
+        txt += "local " + variadicArg.name + " = {...} ";
     }
     else {
-        txt = "function(" + ast.args.join(", ") + ") ";
+        txt = "function(" + ast.args.map(x => x.name).join(", ") + ") ";
+    }
+
+    if(ast.takesSelf && ast.selfType) {
+        txt += `if not is_subclass(self, (${evaluate(ast.selfType)})) then local info = debug.getinfo(1, 'nl'); local t = type(self); error("bad argument 'self' to " .. info.name .. " (got " .. t .. ")", 2) end; `
+    }
+
+    if(ast.args.some(x => x.value)) {
+        txt += ast.args.map(x => x.value? `${x.name} = ${x.name} == nil and (${evaluate(x.value)}) or ${x.name};` : "").join("");
+    }
+
+    if(ast.args.some(x => x.type)) {
+        txt += "checks(" + ast.args.map(x => "\"" + (x.type || "?") + "\"") + ");";
     }
 
     txt += evaluate_functiony(ast.body) + " end";
@@ -277,16 +387,17 @@ evaluators.function = ast => {
     return txt;
 }
 
-evaluators.try_expr = ast => {
-    let txt = "(function() local __return_value; ";
-    let body = evaluate(ast.body);
+evaluators.try_expr = (ast, simplify = false) => {
+    let txt = "";
     if(ast.on_fail) {
-        txt += "if not pcall(function() __return_value = { " + body + " } end) then return " + evaluate(ast.on_fail) + " end; ";
+        txt += "local __return_values = { pcall(function() " + evaluate_functiony(ast.body) + " end) }; "
+        txt += "if not __return_values[1] then " + evaluate_functiony(ast.on_fail) + " end; "
+        txt += "return select(2, unpack(__return_values))"
+        return to_expr(txt, simplify);
     }
     else {
-        txt += "pcall(function() __return_value = {" + body + "} end); "
+        return "select(2, pcall(function() " + evaluate_functiony(ast.body) + " end))";
     }
-    return txt + "return unpack(__return_value); end)()";
 }
 
 evaluators.if_stmt = ast => {
@@ -297,14 +408,18 @@ evaluators.if_stmt = ast => {
     return txt + " end";
 }
 
-evaluators.if_expr = ast => {
-    return "(function() if " + evaluate(ast.condition) 
-        + " then return " + evaluate(ast.true_branch) 
-        + (ast.false_branch? (" else return " + evaluate(ast.false_branch)) : "") + " end end)()";
+const to_expr = (contents, simplify = false) => {
+    return simplify? contents : ("(function() " + contents + " end)()");
+}
+
+evaluators.if_expr = (ast, simplify = false) => {
+    return to_expr("if " + evaluate(ast.condition) 
+        + " then " + evaluate_functiony(ast.true_branch) 
+        + (ast.false_branch? (" else " + evaluate_functiony(ast.false_branch)) : "") + " end", simplify);
 }
 
 evaluators.while_stmt = ast => {
-    return "while " + evaluate(ast.condition) + " do local __broken = false; repeat " + evaluate(ast.body) + " until true; if __broken then break end; end";
+    return "while " + evaluate(ast.condition) + " do " + do_loop_body(ast.body) + " end";
 }
 
 evaluators.continue_stmt = ast => {
@@ -436,31 +551,35 @@ const preface = luamin.minify(fs.readFileSync(join_path(__dirname, "jammy_header
 
 const compile = (filename, mode = "file") => {
     let txt = "-- " + filename + " - GENERATED " + new Date().toLocaleString() + "\n";
+    current_filename = filename;
     txt += "-- JAMMY BOILERPLATE\n";
 
     // IMPLEMENTS "use"
     if(mode == "love_entry_point") {
-        txt += `local __use = require;`;
+        txt += `local import = require;__root_dir = "";`;
     }
     else {
         if (mode == "entry_point") {
-            txt += `local __parent_dir;arg[0] = arg[0]:gsub("\\\\", "/");if arg[0]:find("/") then __parent_dir = arg[0]:match("(.*/)") else __parent_dir = "" end;`;
+            txt += `local __parent_dir;arg[0] = arg[0]:gsub("\\\\", "/");if arg[0]:find("/") then __parent_dir = arg[0]:match("(.*/)") else __parent_dir = "" end;__root_dir=__parent_dir;`;
         }
         else {
             txt += `local __require_params = (...);if not __require_params then error("Cannot run this module because it was not compiled as an entry point.") end;local __parent_dir = __require_params:match("(.-)[^%.]+$"):gsub("%.", "/");`;
         }
     
-        txt += `local function a(b,c)b,c=b:gsub("\\\\","/"),c:gsub("\\\\","/")local d,e={},{}for f in b:gmatch("[^/]+")do table.insert(d,f)end;for f in c:gmatch("[^/]+")do table.insert(e,f)end;for g,h in ipairs(e)do if h==".."then d[#d]=nil else d[#d+1]=h end end;return table.concat(d,"/")end local function __use(path) return require(a(__parent_dir, path):gsub("/", ".")) end;`;    
+        txt += `local function import(path) return require(path_join(__parent_dir, path):gsub("/", ".")) end;`;    
     }
     
     // ----------------
 
-    if(mode == "library" || mode == "entry_point") 
+    if(mode == "library" || mode == "entry_point" || mode == "love_entry_point") {
         txt += preface + "; ";
+    }
+    
+    txt += "__env = { };setmetatable(__env, { __index = _G });";
         
     txt += "\n-- END JAMMY BOILERPLATE\n";
 
-    return minify? luamin.minify(txt + translate(filename)) : (txt + translate(filename).replace(/;/g, ";\n"));
+    return minify? luamin.minify(txt + translate(filename)) : (txt + translate(filename).replace(/; /g, ";\n"));
 }
 
 let compiled_entry_point = false;
@@ -560,7 +679,7 @@ compile_dir(src_dir, out_dir, {
 if(compile_mode == "program" || compile_mode == "love" && options.std) {
     console.log("Compiling standard library...");
     compile_dir(join_path(__dirname, "std").replace(/\\/g, "/"), join_path(out_dir, "std"), {
-        compile_mode: "library"
+        compile_mode: "file"
     });
 }
 

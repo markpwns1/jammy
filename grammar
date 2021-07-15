@@ -98,7 +98,7 @@ break_stmt "break statement" = "break" {
     return ast("break_stmt");
 }
 
-use "use expression" = "use" _ path:expr_no_binop {
+use "use expression" = "use" _ path:string {
     return ast("use", {
         path: path
     });
@@ -305,26 +305,26 @@ expr_list "list of expressions" = head:expr _ tail:("," _ expr)* {
     ];
 }
 
-cool_method_call_expr "method call (without parentheses)" = _ arg:expr_no_binop {
+cool_method_call_expr "method call (without parentheses)" = _ !tuple arg:expr_no_binop {
     return ast("method_call", {
         args: [ arg ]
     });
 }
 
-cool_self_method_call_expr "method call (without parentheses)" = _ ":" _ member:identifier _ arg:expr_no_binop {
+cool_self_method_call_expr "method call (without parentheses)" = _ ":" _ member:unrestricted_identifier _ !tuple arg:expr_no_binop {
     return ast("self_method_call", {
         member: member,
         args: [ arg ]
     });
 }
 
-cool_method_call "method call (without parentheses)" = _ arg:expr {
+cool_method_call "method call (without parentheses)" = _ !tuple arg:expr {
     return ast("method_call", {
         args: [ arg ]
     });
 }
 
-cool_self_method_call "method call (without parentheses)" = _ ":" _ member:identifier _ arg:expr {
+cool_self_method_call "method call (without parentheses)" = _ ":" _ member:unrestricted_identifier _ !tuple arg:expr {
     return ast("self_method_call", {
         member: member,
         args: [ arg ]
@@ -345,12 +345,12 @@ method_call_stmt "method call statement" = cool_method_call / method_call
 
 self_method_call_stmt "method call statement" = cool_self_method_call / self_method_call
 
-self_method_call "object method call" = _ ":" _ member:identifier _ "(" _ args:expr_list? _ ")" _ {
+self_method_call "object method call" = _ ":" _ member:unrestricted_identifier _ "(" _ args:expr_list? _ ")" _ {
     return ast("self_method_call", {
         member: member,
         args: array_of(args)
     });
-} / ":" _ member:identifier _ "!" {
+} / ":" _ member:unrestricted_identifier _ "!" {
     return ast("self_method_call", {
         member: member,
         args: [ ]
@@ -363,7 +363,7 @@ index_key "index by key" = "#" _ key:factor _ {
     });
 }
 
-index_object "index by field" =  "." _ name:identifier _ {
+index_object "index by field" =  "." _ name:unrestricted_identifier _ {
     return ast("index_object", {
         name: name
     });
@@ -427,14 +427,16 @@ string "string" = '"' parts:string_char* '"' {
     });
 }
 
-string_char
-    = !('"' / "\\" / "$") char:. { return char; }
-    / "\\" sequence:. { return "\\" + sequence; }
-    / "${" _ value: expr _ "}" { 
-        return {
-            value: value
-        }
+string_interpolation = "${" _ value: expr _ "}" { 
+    return {
+        value: value
     }
+}
+
+string_char
+    = !('"' / "\\" / string_interpolation) char:. { return char; }
+    / "\\" sequence:. { return "\\" + sequence; }
+    / string_interpolation
 
 string_escape
     = '"'
@@ -446,11 +448,22 @@ string_escape
     / "t"  { return "\t";   }
     / "v"  { return "\x0B"; }
 
+
+unrestricted_identifier = $([_a-zA-Z][_0-9a-zA-Z]*)
+
 identifier "identifier" = !(KEYWORDS !([_0-9a-zA-Z])) x:$([_a-zA-Z][_0-9a-zA-Z]*) {
     return x;
 }
 
-parameter_list = head:identifier tail:(_ "," _ identifier)* _ variadic:"..."? {
+parameter = name: identifier t:(_ ":" _ type)? v:(_ "=" _ expr)? {
+    return {
+        name: name,
+        type: get_nth(t, 3),
+        value: get_nth(v, 3)
+    }
+}
+
+parameter_list = head:parameter tail:(_ "," _ parameter)* _ variadic:"..."? {
     return {
         arguments: [
             head,
@@ -460,7 +473,8 @@ parameter_list = head:identifier tail:(_ "," _ identifier)* _ variadic:"..."? {
     };
 }
 
-func "function" = co:"coroutine"? _ args:((identifier _ "..."?) / ("(" _ parameter_list? _ ")")) _ method:(":=>" / "=>") _ body:expr {
+
+func "function" = co:"coroutine"? _ args:((parameter _ "..."?) / ("(" _ parameter_list? _ ")")) _ method:((("[" _ expr _ "]" _ )? ":=>") / "=>") _ body:expr {
     
     // console.log(args);
     let variadic = false;
@@ -475,12 +489,17 @@ func "function" = co:"coroutine"? _ args:((identifier _ "..."?) / ("(" _ paramet
         a = [ args[0] ];
         variadic = Boolean(args[2]);
     }
-    
+
+    // console.log(method);
+
+    const takesSelf = method != "=>";
+
     return ast("function", {
         isCoroutine: Boolean(co),
         args: a,
         variadic: variadic,
-        takesSelf: method == ":=>",
+        takesSelf: takesSelf,
+        selfType: (takesSelf && method[0])? method[0][2] : null,
         body: body
     });
 }
@@ -516,6 +535,19 @@ table "table" = "{" _ entries:(table_elements _ ","? _)? _ "}" {
     return ast("table", {
         entries: array_of(get_nth(entries, 0))
     });
+}
+
+type "type" = types:(identifier (_ "|" _ identifier)* "?"?) {
+    let optional = types[types.length - 1] == "?";
+    let i = 0;
+    let t = [ ];
+    while(types[i]) {
+        t.push(types[i]);
+        i += 4;
+    }
+    return (optional? "?" : "") + t.join("|");
+} / "?" {
+    return "?";
 }
 
 // optional whitespace

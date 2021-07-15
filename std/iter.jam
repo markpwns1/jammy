@@ -1,0 +1,51 @@
+
+/** import_parameters {
+    "set": [ "number", "iter", "table" ],
+    "append": "debug.setmetatable(0, { __index = function(t, k) return __env.number[k] end })"
+} */
+
+use "std/types.jam";
+
+let number = { };
+
+// let number_metatable = () => getmetatable 0;
+
+number.times_inc = f: function [number_metatable!] :=> >> for i in range_inc self, f i;
+number.times = f: function [number_metatable!] :=> >> for i in range self, f i;
+
+number.to_inc = (to: number, f: function) [number_metatable!] :=> >> for i in range_inc(self, to), f i;
+number.to = (to: number, f: function) [number_metatable!] :=> >> for i in range(self, to), f i;
+
+number.__index = number;
+
+let iter = a: table => {
+    let n, elements = 0, { };
+    for k, _ in pairs(a), {
+        elements #(len elements + 1) = k;
+        n = n + 1;
+    };
+
+    let i = 0;
+    => () => {
+        i = i + 1;
+        if i <= n, => elements #i;
+    };
+};
+
+let table_mt = { };
+
+table_mt.from_iterator = (itr: function, invar, var) => {
+    let t = { };
+    while true, {
+        let v = tbl itr(invar, var);
+
+        if v #1 == nil, break
+        else if len v == 1, t #(len t + 1) = v #1
+        else t #(len t + 1) = v;
+
+        var = v #1;
+    };
+    => t;
+};
+
+=> tbl(number, iter, table_mt);
