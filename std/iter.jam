@@ -1,6 +1,6 @@
 
 /** import_parameters {
-    "set": [ "number", "iter", "table" ],
+    "set": [ "number", "iter", "reduce", "table" ],
     "append": "debug.setmetatable(0, { __index = function(t, k) return __env.number[k] end })"
 } */
 
@@ -32,6 +32,19 @@ let iter = a: table => {
     };
 };
 
+let reduce = (initial, iterator_table: table, f: function) => {
+    let itr, invar, var = ...iterator_table;
+    while true, {
+        let v = tbl itr(invar, var);
+
+        if v #1 == nil, break;
+        var = v #1;
+
+        initial = f (initial, unpack v) || initial;
+    };
+    => initial;
+};
+
 let table_mt = { };
 
 table_mt.from_iterator = (itr: function, invar, var) => {
@@ -48,4 +61,4 @@ table_mt.from_iterator = (itr: function, invar, var) => {
     => t;
 };
 
-=> tbl(number, iter, table_mt);
+=> tbl(number, iter, reduce, table_mt);

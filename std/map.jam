@@ -1,0 +1,23 @@
+/** import_parameters {
+    "set": [ "map" ]
+} */
+
+use "std/iter.jam";
+
+let map = prototype!;
+
+map.constructor = (t: table = { }) [map] :=> >> my._elements = t;
+
+map.set = (k: exists, v) [map] :=> >> my._elements #k = v;
+map.get = k: exists [map] :=> my._elements #k;
+map.has = k: exists [map] :=> bool my._elements #k;
+map.remove = k: exists [map] :=> >> my._elements #k = nil;
+
+map.size = () [map] :=> reduce(0, tbl pairs my._elements, n => n + 1);
+map.keys = () [map] :=> reduce({ }, tbl pairs my._elements, (t, k) => >> t #(len t + 1) = k);
+map.values = () [map] :=> reduce({ }, tbl pairs my._elements, (t, k, v) => >> t #(len t + 1) = v);
+map.to_table = () [map] :=> reduce({ }, tbl pairs my._elements, (t, k, v) => >> t #k = v);
+
+map.shallow_copy = () [map] :=> map self:to_table!;
+
+=> tbl map;

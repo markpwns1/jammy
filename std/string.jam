@@ -39,11 +39,8 @@ string_mt.pad_left = (total_length: number, char: string = " ") [string_metatabl
 string_mt.pad_right = (total_length: number, char: string = " ") [string_metatable!] 
     :=> self .. char:repeat_times (total_length - self:len!);
 
-string_mt.repeat_times = n: number [string_metatable!] :=> {
-    let x = "";
-    for i in range_inc n, x = x .. self;
-    => x;
-};
+string_mt.repeat_times = n: number [string_metatable!] 
+    :=> reduce("", tbl range_inc n, s => s .. self);
 
 string_mt.escape_match = () [string_metatable!] :=> (tbl self:gsub ("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%1")) #1;
 
@@ -72,11 +69,14 @@ string_mt.trim_left = () [string_metatable!] :=> self:match "^%s*(.-)$";
 string_mt.trim_right = () [string_metatable!] :=> self:match "^(.-)%s*$";
 string_mt.trim = () [string_metatable!] :=> self:match "^%s*(.-)%s*$";
 
-string_mt.chars = () [string_metatable!] :=> {
-    let t = { };
-    for i in range_inc self:len!, t #i = self:sub(i, i);
-    => t;
-};
+// string_mt.chars = () [string_metatable!] :=> {
+//     let t = { };
+//     for i in range_inc self:len!, t #i = self:sub(i, i);
+//     => t;
+// };
+
+string_mt.chars = () [string_metatable!] :=> 
+    reduce({ }, tbl range_inc self:len!, (t, i) => >> t #i = self:sub(i, i));
 
 string_mt.iter = () [string_metatable!] :=> {
     let i, n = 0, self:len!;
