@@ -30,7 +30,7 @@ Run `jammy library src out` to compile an entire directory *as a library.* This 
 ### Compiler flags
 - `-V, --version` output the version number
 - `-e, --entry <file>` Program mode only. Specifies the entry point of the program (default: "main.jam")
-- `-s, --no-std` Copies the jammy standard library
+- `-s, --no-std` Doesn't compile and include the Jammy standard library
 - `-m, --minify` Minifies compiled files (including Lua files)
 - `-h, --help` display help for command
 
@@ -44,7 +44,7 @@ Order of operations is abolished. All binary operators will be evaluated left-to
 These are pretty much exactly the same as in Lua, except numbers can only be in decimal format.
 
 ### Strings
-Strings in Jammy are multiline by default. You can include ${ ... } to automatically insert an expression into a string. The following is an example of a Jammy string:
+Strings in Jammy are multiline by default. You can include `${ <expression> }` to automatically insert an expression into a string. The following is an example of a Jammy string:
 ```
 "five plus
 six equals
@@ -95,7 +95,7 @@ let sum_multiply = (a, numbers...) => a * sum ...numbers;
 Notice how you can have any number of parameters. When the function takes one parameter, it the parameter does not need to be parenthesized. A function can take variadic arguments if its last parameter ends with `...`. You can replace `=>` with `:=>` to prepend `self` to the list of parameters. For example,
 ```
 array.insert = x :=> {
-  table.insert my.elements;
+  table.insert(my.elements, x);
 };
 ```
 
