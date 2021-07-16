@@ -8,7 +8,7 @@ use "std/table.jam";
 
 let map = prototype!;
 
-checkers.map = checks.generate_from_prototype "map";
+checkers.map = types.generate_from_prototype "map";
 
 map.__type = "map";
 

@@ -376,7 +376,7 @@ evaluators.function = ast => {
     }
 
     if(ast.args.some(x => x.type)) {
-        txt += "checks(" + ast.args.map(x => "\"" + (x.type || "?") + "\"") + ");";
+        txt += "__typecheck(" + ast.args.map(x => "\"" + (x.type || "?") + "\"") + ");";
     }
 
     txt += evaluate_functiony(ast.body) + " end";

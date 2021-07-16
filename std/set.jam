@@ -7,7 +7,7 @@ use "std/table.jam";
 
 let set = prototype!;
 
-checkers.set = checks.generate_from_prototype "set";
+checkers.set = types.generate_from_prototype "map";
 
 set.__type = "set";
 

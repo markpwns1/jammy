@@ -1,11 +1,11 @@
 /** import_parameters {
-    "set": [ "checks" ]
+    "set": [ "__typecheck", "types" ]
 } */
 
-let checks = import "checks";
+let __typecheck = import "checks";
 
-checks.generate_from_prototype = type_name: string => arg => ((type set) == "table") && arg.__type && (arg.__type == type_name);
+let types = { };
 
-checkers.map = arg => ((type set) == "table") && arg.__type && (arg.__type == "map");
+types.generate_from_prototype = type_name: string => arg => ((type set) == "table") && arg.__type && (arg.__type == type_name);
 
-=> tbl import "checks";
+=> tbl (__typecheck, types);
