@@ -3,10 +3,11 @@
 } */
 
 use "std/types.jam";
+use "std/table.jam";
 
 let set = prototype!;
 
-checkers.set = arg => ((type set) == "table") && arg.__type && (arg.__type == "set");
+checkers.set = checks.generate_from_prototype "set";
 
 set.__type = "set";
 
@@ -65,11 +66,7 @@ set.iter = () [set] :=> {
     };
 };
 
-set.to_table = () [set] :=> {
-    let t = tbl!;
-    for k, _ in pairs my._elements, t #(len t + 1) = k;
-    => t;
-};
+set.to_table = () [set] :=> reduce({ }, tbl pairs my._elements, table.set);
 
 set.shallow_copy = () [set] :=> set ...self:to_table!;
 

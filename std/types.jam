@@ -2,4 +2,10 @@
     "set": [ "checks" ]
 } */
 
+let checks = import "checks";
+
+checks.generate_from_prototype = type_name: string => arg => ((type set) == "table") && arg.__type && (arg.__type == type_name);
+
+checkers.map = arg => ((type set) == "table") && arg.__type && (arg.__type == "map");
+
 => tbl import "checks";

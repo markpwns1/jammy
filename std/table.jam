@@ -1,0 +1,10 @@
+/** import_parameters {
+    "set": [ "table" ]
+} */
+
+let table_mt = { };
+
+table_mt.push = (t: table, v) => t #(len t + 1) = v;
+table_mt.set = (t: table, k: exists, v) => t #k = v;
+
+=> tbl table_mt;
