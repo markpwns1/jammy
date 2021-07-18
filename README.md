@@ -109,7 +109,9 @@ Some syntactic constructs in Jammy explicitly take in an expression, or explicit
 ### Return statements
 Return statements are made like so:
 ```=> <expression>;```
-A return statement *must* return *one* expression. If you do not want to return a value, simply return `nil`. If you want to return multiple values, like Lua does, then return a tuple (this readme contains futher information on tuples).
+A return statement *must* return *one* expression. If you do not want to return a value, simply return `nil`. If you want to return multiple values, like Lua does, then return a tuple, for example:
+```=> (1, "A, 3);```
+(This readme contains futher information on tuples).
 
 ### Turning statements into expressions
 Some syntactic constructs in Jammy explicitly require an expression. A function is an example of such a construct. A **block** may be used to execute statements and then return a value. A block can be used as a statement or an expression, meaning it can be used anywhere. A block is defined like so:
@@ -234,7 +236,7 @@ for i in range 10, print i; // prints 0 to 9 inclusive
 for i in range(5, 10), print i; // prints 5 to 9 inclusive
 for i in range(20, 15, -2), print i; // prints 20 to 16 inclusive, going down by 2
 ```
-There also exists `range_inc` which is `range` but the "end" value is inclusive. `range_inc` also starts at 1 unless directed otherwise. There is also a namespace called `std.iter` which you can use for some useful iterating tools. Take the following example:
+While it `range` appears to be an iterator function, fear not. Jammy compiles this to a simple `for i=start, end, step do` loop, so there is no performance overhead. There also exists `range_inc` which is `range` but the "end" value is inclusive. `range_inc` also starts at 1 unless directed otherwise. There is also a namespace called `std.iter` which you can use for some useful iterating tools (these however, do not compile to anything special and incur a very slight performance cost compared to `range`). Take the following example:
 ```
 use "std.iter";
 
@@ -311,12 +313,47 @@ print add_three ...x; // prints 6
 ```
 
 ### Modules
-You can require modules using the following syntax:
+As far as modules go, Jammy has 2 mechanisms to split code across files: `use` and `import`. Import is the simplest one, it is simply equivalent to Lua's `require`, only it takes a file path, relative to the current file (do not include the file extension!).
 ```
-use "std.array";
+let vec2 = import "../../libraries/vec2";
+```
 
-let x = use "../../file";
+`use` is slightly more complicated. `use` is a statement, not an expression. It is used to include code from other files, but unlike simply using Lua's `require` as a statement, `use` **does not** monkey patch. Anything included is only added to the current file. For example,
+
 ```
+// main.jam
+use "std/array.jam"; // import the array class
+
+print array.new(1, 2, 3); // prints [ 1, 2, 3 ]
+
+import "test.jam"; // execute test.jam
+```
+```
+// test.jam
+print array.new(1, 2, 3); // error, because std/array.jam has not been imported in this file.
+```
+
+To write modules compatible with `use`, simply create a file with some Lua code, and prepend an `import_parameters` section.
+```
+/** import_parameters {
+  parameters go here...
+} */
+```
+There are several import parameters that your module can set. The import parameters are in JSON format.
+
+`set: string[]` -- Upon importing the module, creates the following local variables, and assigns them to the elements of a table you return. Take the following example:
+```
+/** import_parameters {
+  "set": [ "get_five", "get_six", "get_seven" ]
+} */
+
+let get_five = () => 5;
+let get_six = () => 6;
+let get_seven () => 7;
+
+=> tbl(get_five, get_six, get_seven)
+```
+
 The `use` statement is equivalent to Lua's `require` except for one thing: **the use statement works relative to the current file**. The use statement also considers "/" and "." to be equivalent.
 
 ### Prototypes
