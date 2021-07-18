@@ -1,3 +1,0 @@
-
-
-map.constructor = (t: table = { }) [map] :=> >> my._elements = t;
