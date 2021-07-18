@@ -10,8 +10,11 @@ const relative_path = (dir, path) => path.startsWith(dir)? path.substring(dir.le
 const get_dir = f => f.substring(0, f.lastIndexOf("/"));
 const join_path = (a, b) => path.join(a, b).toString().replace(/\\/g, '/');
 
-const grammarContents = fs.readFileSync(join_path(__dirname, "grammar"), "utf8");
-const parser = peg.generate(grammarContents);
+// const grammarContents = fs.readFileSync(join_path(__dirname, "grammar"), "utf8");
+// const parser = peg.generate(grammarContents);
+
+const Scanner = require("./scanner").Scanner;
+const Parser = require("./parser").Parser;
 
 const evaluators = { };
 const pretty = ast => JSON.stringify(ast, null, 2);
@@ -311,12 +314,12 @@ const get_import_params = p => {
 };
 
 evaluators.use = ast => {
-    const lua_path = without_file_extension(ast.path.value).toString().replace(/\\/g, '/');
-    const real_path = join_path(__dirname, ast.path.value);
+    const lua_path = without_file_extension(ast.path).toString().replace(/\\/g, '/');
+    const real_path = join_path(__dirname, ast.path);
     const params = get_import_params(real_path);
 
     let txt = "";
-    const the_import = ast.path.value.startsWith("std/")? 
+    const the_import = ast.path.startsWith("std/")? 
         `require(path_join(__root_dir, "${lua_path}"):gsub(\"/\", \".\"))`
         : `import("${lua_path}")`;
     
@@ -442,100 +445,83 @@ const evaluate = (ast, ...settings) => {
     else throw "No evaluation function for " + pretty(ast);
 }
 
-// gets rid of comments
-const preprocess = txt => {
-    let out = "";
-    let i = 0;
-    while (i < txt.length) {
-        if(txt[i] == "/") {
-            if(i < (txt.length - 1) && txt[i + 1] == "/") {
-                i += 2;
-                while(txt[i] != "\n")
-                    i++;
-                i++;
-                continue;
-            }
-            else if(i < (txt.length - 1) && txt[i + 1] == "*") {
-                i += 2;
-                while(txt[i] != "*" || txt[i + 1] != "/")
-                    i++;
-                i += 2;
-                continue;
-            }
-            else {
-                out += txt[i];
-            }
-        }
-        else {
-            out += txt[i];
-        }
-        i++;
-    }
-    return out;
-}
-
-const expected_to_string = expected => {
-    if(expected.type == "end") {
-        return "end of file";
-    }
-    else if(expected.type == "other") {
-        return expected.description;
-    }
-    else if (expected.type == "literal") {
-        return "'" + expected.text + "'";
-    }
-    else return JSON.stringify(expected);
-}
+// // gets rid of comments
+// const preprocess = txt => {
+//     let out = "";
+//     let i = 0;
+//     while (i < txt.length) {
+//         if(txt[i] == "/") {
+//             if(i < (txt.length - 1) && txt[i + 1] == "/") {
+//                 i += 2;
+//                 while(txt[i] != "\n")
+//                     i++;
+//                 i++;
+//                 continue;
+//             }
+//             else if(i < (txt.length - 1) && txt[i + 1] == "*") {
+//                 i += 2;
+//                 while(txt[i] != "*" || txt[i + 1] != "/")
+//                     i++;
+//                 i += 2;
+//                 continue;
+//             }
+//             else {
+//                 out += txt[i];
+//             }
+//         }
+//         else {
+//             out += txt[i];
+//         }
+//         i++;
+//     }
+//     return out;
+// }
 
 const translate = filename => {
     
-    const source = preprocess(fs.readFileSync(filename, "utf8"));
+    const source = fs.readFileSync(filename, "utf8");
     let ast;
 
     try {
-        ast = parser.parse(source);
+        const scanner = new Scanner();
+        const tokens = scanner.scan(source);
+        const parser = new Parser();
+        ast = parser.parse(tokens);
+        // console.log(JSON.stringify(ast, null, 2));
     }
-    catch  (err) {
-        if (!err.hasOwnProperty('location')) throw(err);
-        console.log(JSON.stringify(err, null, 2));
-        let lines = source.split("\n");
+    catch  (errors) {
+        const lines = source.split("\n");
+        console.log("\n");
+
+        for (const err of errors) {
+            try {
+                const pos = err.token? err.token.pos : err.pos;
+                const length = err.token? err.token.pos.length : 1;
     
-        let expected;
-        if(err.expected) {
-            expected = err.expected
-                .map(x => expected_to_string(x));
-            expected = expected
-                .filter((item, pos) => expected.indexOf(item) == pos);
-        }
-
-        let text = "";
-        text += "\nSYNTAX ERROR @ Ln " + err.location.start.line + ", col " + err.location.start.column + "\n";
-        text += "     | \n";
-        text += err.location.start.line.toString().padStart(4) + " | " + lines[err.location.start.line - 1] + "\n";
-        
-        text += "     | ";
-        for (let i = 0; i < err.location.start.column - 1; i++) {
-            text += " ";
-        }
-        text += "^\n";
-
-        if(err.expected && err.expected.length == 1 && err.expected[0].type == "end") {
-            text += "\nInvalid syntax somewhere in the statement or block that starts here.";
-        }
-        else {
-            if(err.found) {
-                text += "\nUnexpected \"" + err.found + "\"";
+                let text = "";
+                text += err.message;
+                text += "\n     | \n";
+                text += pos.ln.toString().padStart(4) + " | " + lines[pos.ln - 1] + "\n";
+                
+                text += "     | ";
+                for (let i = 0; i < pos.col - 1; i++) {
+                    text += " ";
+                }
+                for (let i = 0; i < length; i++) {
+                    text += "^"
+                }
+                text += "\n";
+    
+                console.log(text);
+                // console.log(err);
             }
-            
-            if(expected) {
-               text += " -- expected one of:\n" + expected.map(x => " - " + x + "\n").join("");
+            catch {
+                console.log("There was an error displaying this error. Here is an uglier version of the error:");
+                console.log(err);
             }
         }
-        
-        
-        console.log(text);
-    
-        process.exit(1);
+
+        return;
     }
 
     for (const stmt of ast) {
@@ -579,7 +565,11 @@ const compile = (filename, mode = "file") => {
         
     txt += "\n-- END JAMMY BOILERPLATE\n";
 
-    return minify? luamin.minify(txt + translate(filename)) : (txt + translate(filename).replace(/; /g, ";\n"));
+    const translated = translate(filename);
+
+    if(translated)
+        return minify? luamin.minify(txt + translated) : (txt + translated.replace(/; /g, ";\n"));
+    else return;
 }
 
 let compiled_entry_point = false;
@@ -616,8 +606,10 @@ const compile_dir = (dir, out, settings) => {
                     text = compile(join_path(dir, item), "file");
                 }
 
-                fs.writeFileSync(join_path(out, without_file_extension(item) + ".lua"), text);
-                process.stdout.write(" OK.\n");
+                if(text) {
+                    fs.writeFileSync(join_path(out, without_file_extension(item) + ".lua"), text);
+                    process.stdout.write(" OK.\n");
+                }
             }
             else {
 
@@ -676,7 +668,8 @@ compile_dir(src_dir, out_dir, {
     entry_file: compile_mode == "love"? "main.jam" : entry_file
 });
 
-if(compile_mode == "program" || compile_mode == "love" && options.std) {
+// console.log(options);
+if((compile_mode == "program" || compile_mode == "love") && options.std) {
     console.log("Compiling standard library...");
     compile_dir(join_path(__dirname, "std").replace(/\\/g, "/"), join_path(out_dir, "std"), {
         compile_mode: "file"
