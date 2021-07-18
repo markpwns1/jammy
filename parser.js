@@ -64,7 +64,8 @@ function leftifyArray(head, tail) {
 }
 
 const KEYWORDS = [
-    "else"
+    "else",
+    "in"
 ];
 
 function tts(token) {
@@ -240,6 +241,11 @@ exports.Parser = class Parser {
                         return this.ifExpr(false);
                     }
 
+                    case "try": {
+                        this.eat();
+                        return this.tryExpr(false);
+                    }
+
                     case "for": return this.forLoop();
 
                     case "while": return this.whileLoop();
@@ -346,7 +352,7 @@ exports.Parser = class Parser {
         this.eat();
 
         let vars;
-        if(this.match("identifier")) {
+        if(this.match("identifier") && this.peek().value != "in") {
             vars = this.identifierList();
         }
         else {
@@ -577,15 +583,15 @@ exports.Parser = class Parser {
         });
     }
 
-    tryExpr() {
-        const body = this.expression();
+    tryExpr(isExpr = true) {
+        const body = isExpr? this.statement() : this.expression();
 
         let onFail;
         if(this.matchIdentifier("else")) {
-            onFail = this.expression();
+            onFail = isExpr? this.statement() : this.expression();
         }
 
-        return ast("try_expr", {
+        return ast(isExpr? "try_expr" : "try_stmt", {
             body: body,
             on_fail: onFail
         });
