@@ -545,17 +545,17 @@ Prototype inheritance can be done by supplying an argument to the `prototype` fu
 let vec3 = extend vec2;
 
 vec3.constructor = (x: number, y: number, z: number) [vec3] :=> {
-  my.super.constructor(self, x, y);
+  super constructor(x, y);
   my.z = z;
 };
 
-vec3.square_magnitude () :=> my.super.square_magnitude self + (my.z * my.z);
+vec3.square_magnitude () :=> super square_magnitude! + (my.z * my.z);
 
 vec3.__tostring = () :=> "(${my.x}, ${my.y}, ${my.z})";
 
 => vec3;
 ```
-As you can see, to override a method, simply declare an identical method in the subclass. To call the superclass' method from within the overriden method, you can use `my.super.the_method(self, ...)`.
+As you can see, to override a method, simply declare an identical method in the subclass. To call the superclass' method from within the overriden method, you can use `super the_method(...)`.
 
 ### Tables
 Jammy's syntax for tables is identical to Javascript's, only field names cannot be wrapped in quotation marks.

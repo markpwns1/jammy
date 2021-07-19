@@ -234,6 +234,11 @@ exports.Parser = class Parser {
 
             case "identifier": {
                 switch(t.value) {
+                    case "super": {
+                        this.eat();
+                        return this.super(false);
+                    }
+
                     case "let": return this.letStmt();
 
                     case "if": {
@@ -628,6 +633,7 @@ exports.Parser = class Parser {
                 });
 
                 case "identifier": switch (t.value) {
+                    case "super": return this.super();
                     case "len": return ast("len", {
                         value: this.unary()
                     });
@@ -666,27 +672,7 @@ exports.Parser = class Parser {
 
                 case "colon": {
                     const name = this.eat("identifier").value;
-                    
-                    let args;
-
-                    if(this.match("open_paren")) {
-                        this.eat();
-                        args = this.expressionList();
-                        this.eat("close_paren");
-                    }
-                    else if(this.match("excl")) {
-                        this.eat();
-                        args = [ ];
-                    }
-                    else {
-                        const f = this.funcCall(isExpr);
-                        if(f) {
-                            args = f.args;
-                        }
-                        else {
-                            throw this.generateError("Expected a function call but got " + tts(this.peek()));
-                        }
-                    }
+                    const args = this.fullFuncCall(isExpr);
 
                     chain.push(ast("self_method_call", {
                         member: name,
@@ -1067,6 +1053,38 @@ exports.Parser = class Parser {
             takesSelf: takesSelf,
             selfType: selfType,
             body: body
+        });
+    }
+
+    fullFuncCall(isExpr = true) {
+        if(this.match("open_paren")) {
+            this.eat();
+            const args = this.expressionList();
+            this.eat("close_paren");
+            return args;
+        }
+        else if(this.match("excl")) {
+            this.eat();
+            return [ ];
+        }
+        else {
+            const f = this.funcCall(isExpr);
+            if(f) {
+                return f.args;
+            }
+            else {
+                throw this.generateError("Expected a function call but got " + tts(this.peek()));
+            }
+        }
+    }
+
+    super(isExpr = true) {
+        const name = this.eat("identifier").value;
+        const args = this.fullFuncCall(isExpr);
+
+        return ast("super_call", {
+            name: name,
+            args: args
         });
     }
 }

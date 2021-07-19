@@ -406,6 +406,10 @@ evaluators.function = ast => {
     return txt;
 }
 
+evaluators.super_call = ast => {
+    return "self.super." + ast.name + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
+};
+
 evaluators.try_expr = (ast, simplify = false) => {
     let txt = "";
     if(ast.on_fail) {
