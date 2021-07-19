@@ -79,9 +79,13 @@ array.new = function (...)
     error("Attempted to use an array without importing array.jam. Either import arrays with `use \"std/array.jam\";` or use luatable(...) in place of your array.", 2)
 end
 
-function checks()
+function __typecheck_arg()
     error("Attempted to use type checks without importing types.jam. Import type checks with `use \"std/types.jam\";`", 2)
 end
+
+__typecheck_arg_optional, __typecheck_arg_union, __typecheck_arg_union_optional = __typecheck_arg, __typecheck_arg, __typecheck_arg;
+
+typechecks = { }
 
 function len(x) return #x end
 function bool(x) return not not x end

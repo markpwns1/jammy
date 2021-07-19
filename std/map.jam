@@ -7,10 +7,9 @@ use "std/types.jam";
 use "std/table.jam";
 
 let map = prototype!;
-
-checkers.map = types.generate_from_prototype "map";
-
 map.__type = "map";
+
+typechecks.map = types.generate_from_prototype map;
 
 map.constructor = (t: table = { }) [map] :=> >> my._elements = t;
 

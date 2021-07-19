@@ -5,8 +5,9 @@
 use "std/types.jam";
 
 let array = prototype!;
-
 array.__type = "array";
+
+typechecks.array = types.generate_from_prototype array;
 
 array.constructor = elements... [array] :=> >> my._elements = elements;
 

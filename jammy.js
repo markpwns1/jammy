@@ -64,20 +64,22 @@ evaluators.variable = ast => {
     return ast.name;
 }
 
+const eval_wrap = ast => ast.type == "number"? ("(" + evaluate(ast) + ")") : evaluate(ast);
+
 evaluators.index_object = ast => {
-    return "(" + evaluate(ast.left) + ")." + ast.name;
+    return eval_wrap(ast.left) + "." + ast.name;
 }
 
 evaluators.index_key = ast => {
-    return "(" + evaluate(ast.left) + ")[" + evaluate(ast.key) + "]";
+    return eval_wrap(ast.left) + "[" + evaluate(ast.key) + "]";
 }
 
 evaluators.method_call = ast => {
-    return "(" + evaluate(ast.left) + ")(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
+    return eval_wrap(ast.left) + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
 }
 
 evaluators.self_method_call = ast => {
-    return "(" + evaluate(ast.left) + "):" + ast.member + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
+    return eval_wrap(ast.left) + ":" + ast.member + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
 }
 
 evaluators.try_stmt = ast => {
@@ -147,7 +149,7 @@ evaluators.bool = ast => {
 }
 
 evaluators.table = ast => {
-    return "{ " + ast.entries.map(x => x.key + " = " + evaluate(x.value)).join(", ") + " }";
+    return "{ " + ast.entries.map(x => "[\"" + x.key + "\"] = " + evaluate(x.value)).join(", ") + " }";
 }
 
 const BINOP_REPLACE_TABLE = {
@@ -371,7 +373,7 @@ evaluators.function = ast => {
     }
 
     if(ast.takesSelf && ast.selfType) {
-        txt += `if not is_subclass(self, (${evaluate(ast.selfType)})) then local info = debug.getinfo(1, 'nl'); local t = type(self); error("bad argument 'self' to " .. info.name .. " (got " .. t .. ")", 2) end; `
+        txt += `if not is_subclass(self, (${evaluate(ast.selfType)})) then error("bad argument 'self' to " .. debug.getinfo(1, 'nl').name .. " (got " .. type(self) .. ")", 2) end; `
     }
 
     if(ast.args.some(x => x.value)) {
@@ -379,7 +381,21 @@ evaluators.function = ast => {
     }
 
     if(ast.args.some(x => x.type)) {
-        txt += "__typecheck(" + ast.args.map(x => "\"" + (x.type || "?") + "\"") + ");";
+        for (let i = 0; i < ast.args.length; i++) {
+            const offset = ast.takesSelf? 0 : 1;
+            const arg = ast.args[i];
+            if(arg.type) {
+                const optional = arg.type.optional? "_optional" : "";
+                if(arg.type.allowed.length == 1) {
+                    txt += `__typecheck_arg${optional}(${i + offset}, ${arg.name}, "${arg.type.allowed[0]}");`;
+                }
+                else {
+                    
+                    txt += `__typecheck_arg_union${optional}(${i + offset}, ${arg.name}, { ${arg.type.allowed.map(x => "\"" + x + "\"").join(",")} });`;
+                }
+            }
+        }
+        // txt += "__typecheck(" + ast.args.map(x => "\"" + (x.type || "?") + "\"") + ");";
     }
 
     txt += evaluate_functiony(ast.body) + " end";
@@ -444,38 +460,6 @@ const evaluate = (ast, ...settings) => {
     if(found) return found(ast, ...settings);
     else throw "No evaluation function for " + pretty(ast);
 }
-
-// // gets rid of comments
-// const preprocess = txt => {
-//     let out = "";
-//     let i = 0;
-//     while (i < txt.length) {
-//         if(txt[i] == "/") {
-//             if(i < (txt.length - 1) && txt[i + 1] == "/") {
-//                 i += 2;
-//                 while(txt[i] != "\n")
-//                     i++;
-//                 i++;
-//                 continue;
-//             }
-//             else if(i < (txt.length - 1) && txt[i + 1] == "*") {
-//                 i += 2;
-//                 while(txt[i] != "*" || txt[i + 1] != "/")
-//                     i++;
-//                 i += 2;
-//                 continue;
-//             }
-//             else {
-//                 out += txt[i];
-//             }
-//         }
-//         else {
-//             out += txt[i];
-//         }
-//         i++;
-//     }
-//     return out;
-// }
 
 const translate = filename => {
     

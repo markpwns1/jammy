@@ -56,7 +56,14 @@ exports.Scanner = class Scanner {
                 }
             }
             catch (e) {
-                errors.push(e);
+                if(Array.isArray(e)) {
+                    for (const er of e) {
+                        errors.push(er);
+                    }
+                }
+                else {
+                    errors.push(e);
+                }
                 this.eat();
 
                 while(this.offset < this.source.length) {
@@ -294,8 +301,12 @@ exports.Scanner = class Scanner {
                 let innerTokens;
                 try {
                     innerTokens = innerScanner.scan(innerText);
-                } catch (e) {
-                    throw this.generateError(e.rawMessage, offsetBefore + e.offset);
+                } catch (err) {
+                    const errors = [ ];
+                    for (const e of err) {
+                        errors.push(this.generateError(e.rawMessage, offsetBefore + e.offset));
+                    }
+                    throw errors;
                 }
 
                 for (const t of innerTokens) {

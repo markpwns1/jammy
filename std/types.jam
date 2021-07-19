@@ -1,11 +1,62 @@
 /** import_parameters {
-    "set": [ "__typecheck", "types" ]
+    "set": [ 
+        "__typecheck", 
+        "__typecheck_arg", 
+        "__typecheck_arg_optional", 
+        "__typecheck_arg_union", 
+        "__typecheck_arg_union_optional", 
+        "types" 
+    ]
 } */
-
-let __typecheck = import "checks";
 
 let types = { };
 
-types.generate_from_prototype = type_name: string => arg => ((type set) == "table") && arg.__type && (arg.__type == type_name);
+let primitives = {
+    nil: true,
+    number: true,
+    string: true,
+    boolean: true,
+    table: true,
+    function: true,
+    thread: true,
+    userdata: true
+};
 
-=> tbl (__typecheck, types);
+let __typeerror = (i, v, e) 
+    => error("bad argument #${i} to ${debug.getinfo(3, "nl").name} (${e} expected, got ${type v})", 3);
+
+let __match_type = (v, t) =>
+    if primitives #t, type v == t
+    else typechecks #t && ((typechecks #t) v);
+
+let __typecheck_arg = (i, v, t) => >> if !__match_type(v, t), __typeerror(i, v, t);
+
+let __typecheck_arg_optional = (i, v, t) => 
+    >> if (v ~= nil) && !__match_type(v, t), __typeerror(i, v, t .. " or nil");
+
+let __typecheck_arg_union = (i, v, ts) => {
+    for _, t in ipairs ts, if __match_type(v, t), => true;
+    __typeerror(i, v, table.concat(ts, " or "));
+};
+
+let __typecheck_arg_union_optional = (i, v, ts) => {
+    if v == nil, => true;
+    for _, t in ipairs ts, if __match_type(v, t), => true;
+    __typeerror(i, v, table.concat(ts, " or ") .. " or nil");
+};
+
+types.generate_from_prototype = proto: table => arg => ((type proto) == "table") && arg.__type && (arg.__type == proto.__type);
+
+typechecks.exists = typechecks.exists || (x => x ~= nil);
+typechecks.int = typechecks.int || (x => (type x == "number") && (math.fmod(x, 1) == 0));
+typechecks.positive = typechecks.positive || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x >= 0);
+typechecks.natural = typechecks.natural || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x > 0);
+
+=> tbl (
+    __typecheck, 
+    __typecheck_arg, 
+    __typecheck_arg_optional, 
+    __typecheck_arg_union, 
+    __typecheck_arg_union_optional, 
+    types
+);

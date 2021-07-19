@@ -69,12 +69,6 @@ string_mt.trim_left = () [string_metatable!] :=> self:match "^%s*(.-)$";
 string_mt.trim_right = () [string_metatable!] :=> self:match "^(.-)%s*$";
 string_mt.trim = () [string_metatable!] :=> self:match "^%s*(.-)%s*$";
 
-// string_mt.chars = () [string_metatable!] :=> {
-//     let t = { };
-//     for i in range_inc self:len!, t #i = self:sub(i, i);
-//     => t;
-// };
-
 string_mt.chars = () [string_metatable!] :=> 
     reduce({ }, tbl range_inc self:len!, (t, i) => >> t #i = self:sub(i, i));
 

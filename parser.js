@@ -963,23 +963,22 @@ exports.Parser = class Parser {
     }
 
     type() {
-        let text = "";
+        const t = {
+            allowed: [ this.eat("identifier").value ],
+            optional: false
+        };
         
-        if(this.peek().type == "identifier") {
-            text += this.eat().value;
-        }
-
         while(this.peek().type == "union") {
             this.eat();
-            text += "|" + this.eat().value
+            t.allowed.push(this.eat("identifier").value);
         }
 
         if(this.peek().type == "question_mark") {
             this.eat();
-            text = "?" + text;
+            t.optional = true;
         }
 
-        return text;
+        return t;
     }
 
     parameter() {

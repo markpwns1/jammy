@@ -7,10 +7,9 @@ use "std/table.jam";
 use "std/iter.jam";
 
 let set = prototype!;
-
-checkers.set = types.generate_from_prototype "map";
-
 set.__type = "set";
+
+typechecks.set = types.generate_from_prototype set;
 
 set.constructor = elements... [set] :=> {
     my._elements = { };
@@ -52,13 +51,8 @@ set.strict_superset = (a: set, b: set) => b:strict_subset a;
 set.superset_eq = (a: set, b: set) => b:subset a;
 
 set.iter = () [set] :=> {
-    let n = 0;
-    let elements = tbl!;
-    for k, _ in pairs my._elements, {
-        elements #(len elements + 1) = k;
-        n = n + 1;
-    };
-
+    let elements = self:to_table!;
+    let n = len elements;
     let i = 0;
     => () => {
         i = i + 1;
