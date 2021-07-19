@@ -4,6 +4,15 @@ Jammy is an original programming language written in NodeJS that transpiles to L
 
 Note: it is expected that a Jammy programmer has a reasonable level of experience with Lua, because much of its behaviour is derived from Lua, and because runtime errors might sometimes require you digging through the compiled code.
 
+## Features
+- More concise and expressive syntax
+- Easy prototypes and inheritance
+- Expanded standard library including sets, maps, and zero-indexed arrays
+- More powerful module system
+- Optional function type checks and default arguments
+- String interpolation and full standard library string suite
+- All with minimal overhead, and compiling to straightforward Lua code
+
 ## Sample
 The following is the `string.split` function added by Jammy's standard library. Almost all of Jammy's standard library is written in Jammy (made possible by the quality of the code generation).
 
@@ -49,6 +58,20 @@ Note that this is *not* a good example of what Jammy is good at. The following i
 array.first_index_of = item [array] :=> >> 
     for i in range_inc len my._elements,
         if my._elements #i == item, => i - 1;
+```
+
+```lua
+-- Compiles to:
+array.first_index_of = function(self, item) 
+    if not is_subclass(self, (array)) then 
+        error("bad argument 'self' to " .. debug.getinfo(1, 'nl').name .. " (got " .. type(self) .. ")", 2) 
+    end;
+    for i = 1, #(self._elements) do 
+        if (self._elements[i]==item) then 
+            do return (i-1) end 
+        end 
+    end 
+end;
 ```
 
 ## Installation
