@@ -103,7 +103,7 @@ ${5 + 6}"
 ```
 
 ### Comments
-Single-line comments start with a `//` like in C-style languages. Multi-line comments similarly start with `/*` and end with `*/`. Nested multi-line comments are not supported (yet).
+Single-line comments start with a `//` like in C-style languages. Multi-line comments similarly start with `/*` and end with `*/`. Nested multi-line comments are supported.
 
 ### Variables
 Variables are declared using the `let` statement. Any variable declared this way will be local.
