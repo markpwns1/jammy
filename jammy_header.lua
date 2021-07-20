@@ -49,7 +49,10 @@ function bool(x) return not not x end
 
 function table.merge(a, b)
     if b and (type(b) == "table") then 
-        if getmetatable(b) then setmetatable(getmetatable(b), { __index = a}) end
+        local bmt = getmetatable(b) or { }
+        local i = bmt.__index;
+        bmt.__index = function (self, key) return i(self, key) or a[key] end
+        setmetatable(b, bmt)
     end
     return b
 end
