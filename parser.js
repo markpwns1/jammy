@@ -396,7 +396,7 @@ exports.Parser = class Parser {
         });
     }
 
-    forLoop() {
+    forLoop(isExpr = false) {
         this.eat();
 
         let vars;
@@ -411,9 +411,9 @@ exports.Parser = class Parser {
 
         const iterator = this.expression();
         this.eat("comma");
-        const body = this.statement();
+        const body = isExpr? this.expression() : this.statement();
 
-        return ast("for_in_stmt", {
+        return ast(isExpr? "for_in_expr" : "for_in_stmt", {
             variables: vars,
             iterator: iterator,
             body: body
@@ -447,18 +447,6 @@ exports.Parser = class Parser {
                     }),
                     args: [ this.index(true) ]
                 });
-            }
-
-            case "identifier": {
-                const v = this.matchIdentifier("if", "try", "match");
-                if(v) {
-                    switch(v) {
-                        case "if": return this.ifExpr(true);
-                        case "try": return this.tryExpr();
-                        case "match": return this.matchExpr(true);
-                    }
-                }
-                else return this.binary();
             }
 
             case "open_paren": {
@@ -687,6 +675,23 @@ exports.Parser = class Parser {
                     case "len": return ast("len", {
                         value: this.unary()
                     });
+                    
+                    case "if": {
+                        this.back();
+                        return this.ifExpr(true);
+                    }
+                    case "try": {
+                        this.back();
+                        return this.tryExpr();
+                    }
+                    case "match": {
+                        this.back();
+                        return this.matchExpr(true);
+                    }
+                    case "for": {
+                        this.back();
+                        return this.forLoop(true);
+                    }
                 }
             }
 

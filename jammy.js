@@ -289,8 +289,7 @@ const do_loop_body = (ast) => {
     }
 }
 
-evaluators.for_in_stmt = ast => {
-    // console.log(ast);
+const do_for_loop = ast => {
     if(ast.iterator.type == "method_call" 
     && ast.iterator.left.type == "variable"
     && ast.iterator.args.length > 0
@@ -300,44 +299,51 @@ evaluators.for_in_stmt = ast => {
         
         if(ast.iterator.args.length == 1) {
             if(ast.iterator.left.name == "range") {
-                return "for " + ast.variables[0] + " = 0, ((" + evaluate(ast.iterator.args[0]) + ")-1) do " + do_loop_body(ast.body) + " end";
+                return "for " + ast.variables[0] + " = 0, ((" + evaluate(ast.iterator.args[0]) + ")-1) do ";
             }
             else {
-                return "for " + ast.variables[0] + " = 1, " + evaluate(ast.iterator.args[0]) + " do " + do_loop_body(ast.body) + " end";
+                return "for " + ast.variables[0] + " = 1, " + evaluate(ast.iterator.args[0]) + " do ";
             }
         }
         else if(ast.iterator.args.length == 2) {
             if(ast.iterator.left.name == "range") {
-                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-1) do " + do_loop_body(ast.body) + " end";
+                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-1) do ";
             }
             else {
-                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", " + evaluate(ast.iterator.args[1]) + " do " + do_loop_body(ast.body) + " end";
+                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", " + evaluate(ast.iterator.args[1]) + " do ";
             }
         }
         else if(ast.iterator.args.length == 3) {
             if(ast.iterator.left.name == "range") {
                 let incr = evaluate(ast.iterator.args[2]);
                 if(incr == "1") {
-                    return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-1) do " + do_loop_body(ast.body) + " end";
+                    return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-1) do ";
             
                 }
                 else if(incr == "-(1)") {
-                    return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")+1), -1 do " + do_loop_body(ast.body) + " end";
+                    return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")+1), -1 do ";
                 }
                 else {
-                    return "local __incr = " + incr + "; for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-math.sign(__incr)), __incr do " + do_loop_body(ast.body) + " end";
+                    return "local __incr = " + incr + "; for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", ((" + evaluate(ast.iterator.args[1]) + ")-math.sign(__incr)), __incr do ";
                 }
             }
             else {
-                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", " + evaluate(ast.iterator.args[1]) + ", " + evaluate(ast.iterator.args[2]) + " do " + do_loop_body(ast.body) + " end";
+                return "for " + ast.variables[0] + " = " + evaluate(ast.iterator.args[0]) + ", " + evaluate(ast.iterator.args[1]) + ", " + evaluate(ast.iterator.args[2]) + " do ";
             }
         }
     }
     else {
-        return "for " + ast.variables.join(", ") + " in " + evaluate(ast.iterator) + " do " + do_loop_body(ast.body) + " end";
+        return "for " + ast.variables.join(", ") + " in " + evaluate(ast.iterator) + " do ";
     }
+}
+
+evaluators.for_in_stmt = ast => {
+    return do_for_loop(ast) + do_loop_body(ast.body) + " end";
 };
 
+evaluators.for_in_expr = ast => {
+    return "(function() local t = {} " + do_for_loop(ast) + "t[#t+1] = " + evaluate(ast.body) + " end return unpack(t) end)()";
+};
 
 const cached_modules = { };
 
