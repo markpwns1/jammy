@@ -9,8 +9,6 @@
     ]
 } */
 
-let types = { };
-
 let primitives = {
     nil: true,
     number: true,
@@ -25,27 +23,30 @@ let primitives = {
 let __typeerror = (i, v, e) 
     => error("bad argument #${i} to ${debug.getinfo(3, "nl").name} (${e} expected, got ${type v})", 3);
 
-let __match_type = (v, t) =>
+let __match_type = (c, v, t) =>
     if primitives #t, type v == t
-    else typechecks #t && ((typechecks #t) v);
+    else c && c #t && ((c #t) v);
 
-let __typecheck_arg = (i, v, t) => >> if !__match_type(v, t), __typeerror(i, v, t);
+let __typecheck_arg = (c, i, v, t) => >> if !__match_type(c, v, t), __typeerror(i, v, t);
 
-let __typecheck_arg_optional = (i, v, t) => 
-    >> if (v ~= nil) && !__match_type(v, t), __typeerror(i, v, t .. " or nil");
+let __typecheck_arg_optional = (c, i, v, t) => 
+    >> if (v ~= nil) && !__match_type(c, v, t), __typeerror(i, v, t .. " or nil");
 
-let __typecheck_arg_union = (i, v, ts) => {
-    for _, t in ipairs ts, if __match_type(v, t), => true;
+let __typecheck_arg_union = (c, i, v, ts) => {
+    for _, t in ipairs ts, if __match_type(c, v, t), => true;
     __typeerror(i, v, table.concat(ts, " or "));
 };
 
-let __typecheck_arg_union_optional = (i, v, ts) => {
+let __typecheck_arg_union_optional = (c, i, v, ts) => {
     if v == nil, => true;
-    for _, t in ipairs ts, if __match_type(v, t), => true;
+    for _, t in ipairs ts, if __match_type(c, v, t), => true;
     __typeerror(i, v, table.concat(ts, " or ") .. " or nil");
 };
 
-types.generate_from_prototype = proto: table => arg => ((type proto) == "table") && arg.__type && (arg.__type == proto.__type);
+let types = {
+    subclass_of: proto: table => arg => (type arg == "table") && (arg.__class == proto);
+    has_metatable: t: table => arg => has_metatable(arg, t);
+};
 
 typechecks.exists = typechecks.exists || (x => x ~= nil);
 typechecks.int = typechecks.int || (x => (type x == "number") && (math.fmod(x, 1) == 0));

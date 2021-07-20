@@ -1,13 +1,14 @@
 
-
 table.length = function (t)
     local n = 0
-    for _, _ in pairs(t) do n = n + 1 end
+    for _ in pairs(t) do n = n + 1 end
     return n
 end
 
+function ternary(c, t, f) if c then return t else return f end end
+
 math.sign = function (x)
-    if x < 0 then return -1 else return 1 end
+    return ternary(x < 0, -1, 1)
 end
 
 unpack = unpack or table.unpack
@@ -16,48 +17,9 @@ getfenv = getfenv or debug.getfenv
 function lt(a, b) return a < b end
 function gt(a, b) return a > b end 
 
-function range_inc(a, b, c)
-    if b == nil and c == nil then return range(1, a+1)
-    else 
-        c = c or 1
-        return range(a, b + math.sign(c), c) 
-    end
-end
-
-function range(a, b, c)
-    if b == nil and c == nil then
-        local t = a; a = 0; b = t; c = 1
-    elseif c == nil then
-        c = 1
-    end
-    local i = a - c
-    local f = ternary(c < 0, gt, lt)
-    return function()
-        i = i + c
-        if f(i, b) then return i end
-    end
-end
-
 function nop() end
 
-function prototype(super)
-    local proto = { super = super }
-    local proto_mt = {
-        __call = function(self, ...)
-            local instance = { }
-            do setmetatable(instance, proto) end
-            (instance.constructor or nop)(instance, ...);
-            return instance
-        end,
-        __index = super
-    }
-    setmetatable(proto_mt, super)
-    proto.__index = proto
-    setmetatable(proto, proto_mt)
-    return proto
-end
-
-function is_subclass(A, B)
+function has_metatable(A, B)
     local mt = getmetatable(A)
     while mt do
         if mt == B then
@@ -68,38 +30,28 @@ function is_subclass(A, B)
     return false
 end
 
-extend = prototype
-
 function tbl(...) return {...} end
 
-function ternary(c, t, f) if c then return t else return f end end
-
-array = { }
-array.new = function (...)
-    error("Attempted to use an array without importing array.jam. Either import arrays with `use \"std/array.jam\";` or use luatable(...) in place of your array.", 2)
-end
+array = { 
+    new = function (...)
+        error("Attempted to use an array without importing array.jam. Either import arrays with `use \"std/array.jam\";` or use luatable(...) in place of your array.", 2)
+    end
+}
 
 function __typecheck_arg()
     error("Attempted to use type checks without importing types.jam. Import type checks with `use \"std/types.jam\";`", 2)
 end
 
-__typecheck_arg_optional, __typecheck_arg_union, __typecheck_arg_union_optional = __typecheck_arg, __typecheck_arg, __typecheck_arg;
-
-typechecks = { }
+typechecks, __typecheck_arg_optional, __typecheck_arg_union, __typecheck_arg_union_optional = {}, __typecheck_arg, __typecheck_arg, __typecheck_arg;
 
 function len(x) return #x end
 function bool(x) return not not x end
 
 function table.merge(a, b)
-    if type(b) == "table" then
-        local x = { }
-        if a then for k, v in pairs(a) do x[k] = v end end
-        for k, v in pairs(b) do x[k] = v end
-        setmetatable(x, table.merge(getmetatable(a or { }), getmetatable(b)))
-        return x
-    else
-        return b
+    if b and (type(b) == "table") then 
+        if getmetatable(b) then setmetatable(getmetatable(b), { __index = a}) end
     end
+    return b
 end
 
 function __import(n, l, r)
@@ -109,10 +61,6 @@ function __import(n, l, r)
     end
     return unpack(b)
 end
-
-STRING_INSTANCE = ""
-NUMBER_INSTANCE = 0
-BOOL_INSTANCE = true
 
 function path_join(b,c)
     b, c = b:gsub("\\\\","/"), c:gsub("\\\\","/")

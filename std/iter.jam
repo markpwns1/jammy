@@ -10,11 +10,11 @@ let number = { };
 
 // let number_metatable = () => getmetatable 0;
 
-number.times_inc = f: function [number_metatable!] :=> >> for i in range_inc self, f i;
-number.times = f: function [number_metatable!] :=> >> for i in range self, f i;
+number.times_inc = f: function [number_metatable!] :=> >> for i in range_inc @, f i;
+number.times = f: function [number_metatable!] :=> >> for i in range @, f i;
 
-number.to_inc = (to: number, f: function) [number_metatable!] :=> >> for i in range_inc(self, to), f i;
-number.to = (to: number, f: function) [number_metatable!] :=> >> for i in range(self, to), f i;
+number.to_inc = (to: number, f: function) [number_metatable!] :=> >> for i in range_inc(@, to), f i;
+number.to = (to: number, f: function) [number_metatable!] :=> >> for i in range(@, to), f i;
 
 number.__index = number;
 

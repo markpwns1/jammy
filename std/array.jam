@@ -1,167 +1,166 @@
 /** import_parameters {
-    "set": [ "array" ]
+    "set": [ "array", "typechecks" ]
 } */
 
 use "std/types.jam";
 
-let array = prototype!;
-array.__type = "array";
+prototype array {
+    
+    constructor: elements... :=> >> @_elements = elements;
 
-typechecks.array = types.generate_from_prototype array;
+    new: elements... => array ...elements;
 
-array.constructor = elements... [array] :=> >> my._elements = elements;
+    is_array: a => ((type a) == "table") && a.__type && (a.__type == "array");
 
-array.new = elements... => array ...elements;
+    from_table: t: table => array ...t;
 
-array.is_array = a => ((type a) == "table") && a.__type && (a.__type == "array");
+    __index: key: exists :=> 
+        if type key == "number", @_elements #(key + 1) 
+        else if key == "length", len @_elements
+        else array #key;
 
-array.from_table = t: table => array ...t;
+    __newindex: (key: exists, value) :=> >> 
+        if type key == "number", 
+            if (key < 0) || (key > @length), 
+                error "Attempt to set out-of-bounds index in array: ${key} -- Valid bounds are [0, ${@length})"
+            else @_elements #(key + 1) = value
+        else rawset(@, key, value);
 
-array.__index = key: exists [array] :=> 
-    if type key == "number", my._elements #(key + 1) 
-    else if key == "length", len my._elements
-    else array #key;
-
-array.__newindex = (key: exists, value) [array] :=> >> 
-    if type key == "number", 
-        if (key < 0) || (key > my.length), 
-            error "Attempt to set out-of-bounds index in array: ${key} -- Valid bounds are [0, ${my.length})"
-        else my._elements #(key + 1) = value
-    else rawset(self, key, value);
-
-array.__tostring = () [array] :=> {
-    let str = "[ ";
-    let n = len my._elements;
-    for i in range_inc n, {
-        str = str .. tostring my._elements #i;
-        if i < n, str = str .. ", ";
-    };
-    => str .. " ]";
-};
-
-array.count = () [array] :=> len my._elements;
-
-array.iter = () [array] :=> {
-    let i, n = 0, len my._elements;
-    => () => {
-        i = i + 1;
-        if i <= n, => my._elements #i;
-    };
-};
-
-array.ipairs = () [array] :=> {
-    let i, n = 0, len my._elements;
-    => () => {
-        i = i + 1;
-        if i <= n, => (i, my._elements #i);
-    };
-};
-
-array.first_index_of = item [array] :=> >> 
-    for i in range_inc len my._elements,
-        if my._elements #i == item, => i - 1;
-
-array.last_index_of = item [array] :=> >> 
-    for i in range_inc(len my._elements, 1, -1),
-        if my._elements #i == item, => i - 1;
-
-array.insert = (i: number, item: exists) [array] :=> >> table.insert(my._elements, i, item);
-
-array.push_bottom = (i: number, item: exists) [array] :=> >> table.insert(my._elements, 1, item);
-
-array.pop_bottom = (i: number, item: exists) [array] :=> >> table.remove(my._elements, 1);
-
-array.push = item: exists [array] :=> {
-    my._elements #(len my._elements + 1) = item;
-    => item;
-};
-
-array.pop = () [array] :=> {
-    let n = len my._elements;
-    let item = my._elements #n;
-    my._elements #n = nil;
-    => item;
-};
-
-array.remove_at = i: number [array] :=> table.remove(my._elements, i + 1);
-
-array.remove = item: exists [array] :=> >> for i, v in ipairs my._elements, if v == item, table.remove(my._elements, i);
-
-array.contains = item: exists [array] :=> bool >> for _, v in ipairs my._elements, if item == v, => true;
-array.has = array.contains;
-
-array.get_elements = () [array] :=> my._elements;
-
-array.shallow_copy = () [array] :=> array.from_table my._elements;
-
-array.equal_to = (a: array, b: array) => {
-    if len a._elements ~= len b._elements, => false;
-    for i in range_inc len a._elements,
-        if (a._elements #i) ~= (b.elements #i), => false;
-    => true;
-};
-
-array.slice = (start_index: number, end_index: number?) [array] :=> {
-    let sliced_table = tbl!;
-    start_index = start_index + 1;
-
-    if end_index == nil, end_index = len self._elements;
-
-    let j = 1;
-    for i in range_inc(start_index, end_index), {
-        sliced_table #j = my._elements #i;
-        j = j + 1;
+    __tostring: () :=> {
+        let str = "[ ";
+        let n = len @_elements;
+        for i in range_inc n, {
+            str = str .. tostring @_elements #i;
+            if i < n, str = str .. ", ";
+        };
+        => str .. " ]";
     };
 
-    => array.from_table sliced_table;
-};
+    count: () :=> len @_elements;
 
-array.concat = (a: array, b: array) => {
-    let c = a:shallow_copy!;
-    let a_n = len a._elements;
-    for i, v in b:ipairs!, c._elements #(a_n + i) = v;
-    => c;
-};
-
-array.clear = () [array] :=> >> for i in range_inc len my._elements, my._elements #i = nil;
-
-array.first = () [array] :=> my._elements #1;
-
-array.last = () [array] :=> my._elements #(len my._elements);
-
-array.head = array.first;
-
-array.tail = () [array] :=> self:slice 1;
-
-array.get = i: number [array] :=> my._elements #(i + 1);
-
-array.set_elements = t: table [array] :=> {
-    let t_n, my_n = len t._elements, len my._elements;
-    let i = 1;
-
-    while i <= t_n, {
-        my._elements #i = t._elements #i;
-        i = i + 1;
+    iter: () :=> {
+        let i, n = 0, len @_elements;
+        => () => {
+            i = i + 1;
+            if i <= n, => @_elements #i;
+        };
     };
 
-    while i <= my_n, {
-        my._elements #i = nil;
-        i = i + 1;
+    ipairs: () :=> {
+        let i, n = 0, len @_elements;
+        => () => {
+            i = i + 1;
+            if i <= n, => (i, @_elements #i);
+        };
     };
-};
 
-array.each_i = f: function [array] :=> >> for i, v in ipairs(my._elements), f(i, v); 
-array.each = f: function [array] :=> >> for i, v in ipairs(my._elements), f v; 
+    first_index_of: item :=> >> 
+        for i in range_inc len @_elements,
+            if @_elements #i == item, => i - 1;
 
-array.set = (i: number, item) [array] :=> {
-    if (i < 0) || (i >= my.length), 
-        error "Attempt to set out-of-bounds index in array: ${i} -- Valid bounds are [0, ${my.length})"
-    else {
-        my._elements #(i + 1) = item;
+    last_index_of: item :=> >> 
+        for i in range_inc(len @_elements, 1, -1),
+            if @_elements #i == item, => i - 1;
+
+    insert: (i: number, item: exists) :=> >> table.insert(@_elements, i, item);
+
+    push_bottom: (i: number, item: exists) :=> >> table.insert(@_elements, 1, item);
+
+    pop_bottom: (i: number, item: exists) :=> >> table.remove(@_elements, 1);
+
+    push: item: exists :=> {
+        @_elements #(len @_elements + 1) = item;
         => item;
     };
+
+    pop: () :=> {
+        let n = len @_elements;
+        let item = @_elements #n;
+        @_elements #n = nil;
+        => item;
+    };
+
+    remove_at: i: number :=> table.remove(@_elements, i + 1);
+
+    remove: item: exists :=> >> for i, v in ipairs @_elements, if v == item, table.remove(@_elements, i);
+
+    contains: item: exists :=> bool >> for _, v in ipairs @_elements, if item == v, => true;
+    has: array.contains;
+
+    get_elements: () :=> @_elements;
+
+    shallow_copy: () :=> array.from_table @_elements;
+
+    equal_to: (a: array, b: array) => {
+        if len a._elements ~= len b._elements, => false;
+        for i in range_inc len a._elements,
+            if (a._elements #i) ~= (b.elements #i), => false;
+        => true;
+    };
+
+    slice: (start_index: number, end_index: number?) :=> {
+        let sliced_table = tbl!;
+        start_index = start_index + 1;
+
+        if end_index == nil, end_index = len @_elements;
+
+        let j = 1;
+        for i in range_inc(start_index, end_index), {
+            sliced_table #j = @_elements #i;
+            j = j + 1;
+        };
+
+        => array.from_table sliced_table;
+    };
+
+    concat: (a: array, b: array) => {
+        let c = a:shallow_copy!;
+        let a_n = len a._elements;
+        for i, v in b:ipairs!, c._elements #(a_n + i) = v;
+        => c;
+    };
+
+    clear: () :=> >> for i in range_inc len @_elements, @_elements #i = nil;
+
+    first: () :=> @_elements #1;
+
+    last: () :=> @_elements #(len @_elements);
+
+    head: array.first;
+
+    tail: () :=> @slice 1;
+
+    get: i: number :=> @_elements #(i + 1);
+
+    set_elements: t: table :=> {
+        let t_n, my_n = len t._elements, len @_elements;
+        let i = 1;
+
+        while i <= t_n, {
+            @_elements #i = t._elements #i;
+            i = i + 1;
+        };
+
+        while i <= my_n, {
+            @_elements #i = nil;
+            i = i + 1;
+        };
+    };
+
+    each_i: f: function :=> >> for i, v in ipairs @_elements, f(i, v); 
+    each: f: function :=> >> for i, v in ipairs @_elements, f v; 
+
+    set: (i: number, item) :=> {
+        if (i < 0) || (i >= @length), 
+            error "Attempt to set out-of-bounds index in array: ${i} -- Valid bounds are [0, ${@length})"
+        else {
+            @_elements #(i + 1) = item;
+            => item;
+        };
+    };
+
+    unpack: () :=> ...@_elements;
+
 };
 
-array.unpack = () [array] :=> ...my._elements;
-
-=> tbl array;
+=> tbl (array, typechecks);

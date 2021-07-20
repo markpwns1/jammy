@@ -30,7 +30,8 @@ const SYMBOLS = {
     "}": "close_curly",
     ";": "semicolon",
     "?": "question_mark",
-    "|": "union"
+    "|": "union",
+    "@": "at"
 };
 
 exports.SYMBOLS = SYMBOLS;

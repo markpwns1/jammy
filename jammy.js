@@ -28,6 +28,8 @@ const scopes = [ ];
 
 const current_scope = () => scopes[scopes.length - 1];
 
+const method_stack = [ ];
+
 let current_filename;
 
 let output = "";
@@ -64,7 +66,7 @@ evaluators.variable = ast => {
     return ast.name;
 }
 
-const eval_wrap = ast => ast.type == "number"? ("(" + evaluate(ast) + ")") : evaluate(ast);
+const eval_wrap = ast => (ast.type == "number" || ast.type == "string")? ("(" + evaluate(ast) + ")") : evaluate(ast);
 
 evaluators.index_object = ast => {
     return eval_wrap(ast.left) + "." + ast.name;
@@ -81,6 +83,55 @@ evaluators.method_call = ast => {
 evaluators.self_method_call = ast => {
     return eval_wrap(ast.left) + ":" + ast.member + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
 }
+
+evaluators.class = ast => {
+    const superproto = ast.extending || "nil";
+    let txt = `local ${ast.name};`
+    txt += `do `;
+    txt += `local __super = ${superproto};`;
+    ast.table.entries.unshift({ key: "__name", value: { type: "string", value: ast.name, interpolations: [ ] }});
+    ast.table.entries.unshift({ key: "super", value: { type: "variable", name: "__super" }});
+    if(!ast.table.entries.some(x => x.key == "__tostring")) {
+        ast.table.entries.unshift({ key: "__tostring", value: 
+            {
+                type: "function",
+                args: [ ],
+                takesSelf: true,
+                variadic: false,
+                body: { type: "string", value: `<${ast.name}>` }
+            } 
+        });
+    }
+
+    txt += `local __proto = {};`;
+    txt += `__proto.__index = __proto;`;
+    txt += `${ast.name} = setmetatable(__proto, setmetatable({
+        __call = function(self, ...)
+            local instance = setmetatable({ __class = __proto }, __proto);
+            (instance.constructor or nop)(instance, ...);
+            return instance
+        end,
+        __index = __super
+    }, __super));`;
+    
+    txt += ast.table.entries.map(x => {
+        let t = "__proto[\"" + x.key + "\"] = ";
+        method_stack.push({
+            name: x.key
+        });
+        if(x.value.type == "function" && typeof x.value.selfType === "undefined") {
+            x.value.selfType = { type: "variable", name: ast.name };
+        }
+        t += evaluate(x.value);
+        method_stack.pop();
+        return t + ";";
+    }).join("");
+    
+    txt += "end ";
+    txt += `local typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and (arg.__class==${ast.name}) end }) `;
+    
+    return txt;
+};
 
 evaluators.try_stmt = ast => {
     let txt = "";
@@ -373,7 +424,7 @@ evaluators.function = ast => {
     }
 
     if(ast.takesSelf && ast.selfType) {
-        txt += `if not is_subclass(self, (${evaluate(ast.selfType)})) then error("bad argument 'self' to " .. debug.getinfo(1, 'nl').name .. " (got " .. type(self) .. ")", 2) end; `
+        txt += `if not has_metatable(self, (${evaluate(ast.selfType)})) then error("bad argument 'self' to " .. debug.getinfo(1, 'nl').name .. " (got " .. type(self) .. ")", 2) end; `
     }
 
     if(ast.args.some(x => x.value)) {
@@ -387,11 +438,11 @@ evaluators.function = ast => {
             if(arg.type) {
                 const optional = arg.type.optional? "_optional" : "";
                 if(arg.type.allowed.length == 1) {
-                    txt += `__typecheck_arg${optional}(${i + offset}, ${arg.name}, "${arg.type.allowed[0]}");`;
+                    txt += `__typecheck_arg${optional}(typechecks, ${i + offset}, ${arg.name}, "${arg.type.allowed[0]}");`;
                 }
                 else {
                     
-                    txt += `__typecheck_arg_union${optional}(${i + offset}, ${arg.name}, { ${arg.type.allowed.map(x => "\"" + x + "\"").join(",")} });`;
+                    txt += `__typecheck_arg_union${optional}(typechecks, ${i + offset}, ${arg.name}, { ${arg.type.allowed.map(x => "\"" + x + "\"").join(",")} });`;
                 }
             }
         }
@@ -406,8 +457,14 @@ evaluators.function = ast => {
     return txt;
 }
 
+const get_current_method = () => method_stack[method_stack.length - 1];
+
+evaluators.super_value = () => "self.super";
+
 evaluators.super_call = ast => {
-    return "self.super." + ast.name + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
+    ast.args.unshift({ type: "variable", name: "self" });
+    const method = get_current_method();
+    return "self.super." + method.name + "(" + ast.args.map(x => evaluate(x)).join(", ") + ")";
 };
 
 evaluators.try_expr = (ast, simplify = false) => {

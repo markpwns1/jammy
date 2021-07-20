@@ -9,69 +9,50 @@ Note: it is expected that a Jammy programmer has a reasonable level of experienc
 - Easy prototypes and inheritance
 - Expanded standard library including sets, maps, and zero-indexed arrays
 - More powerful module system
-- Optional function type checks and default arguments
+- Optional runtime function type checks and default arguments
 - String interpolation and full standard library string suite
 - All with minimal overhead, and compiling to straightforward Lua code
 
 ## Sample
-The following is the `string.split` function added by Jammy's standard library. Almost all of Jammy's standard library is written in Jammy (made possible by the quality of the code generation).
+The following is the `first_index_of` function in the `array` class added by Jammy's standard library. Almost all of Jammy's standard library is written in Jammy (made possible by the quality of the code generation).
 
 ```rust
-string_mt.split = separator: string [string_metatable!] :=> {
-    let t = { };
-    let i = self:index_of separator;
-    while i && (i < (self:len! + 1)), {
-        t #(len t + 1) = self:slice (0, i - 1);
-        self = self:slice(i + separator:len!);
-        i = self:index_of separator;
+/** import_parameters {
+    "set": [ "map", "typechecks" ]
+} */
+
+use "std/iter.jam";
+use "std/types.jam";
+use "std/table.jam";
+
+prototype map {
+
+    constructor: (t: table = { }) :=> >> @_elements = t;
+
+    set: (k: exists, v) :=> >> @_elements #k = v;
+    get: k: exists :=> @_elements #k;
+    has: k: exists :=> bool @_elements #k;
+    remove: k: exists :=> >> @_elements #k = nil;
+    clear: () :=> >> for k, v in pairs @_elements, @_elements #k = nil;
+
+    size: () :=> reduce(0, tbl pairs @_elements, n => n + 1);
+    keys: () :=> reduce({ }, tbl pairs @_elements, table.push);
+    values: () :=> reduce({ }, tbl pairs @_elements, (t, k, v) => >> t #(len t + 1) = v);
+
+    to_table: () :=> reduce({ }, tbl pairs @_elements, table.set);
+    shallow_copy: () :=> map @to_table!;
+    pairs: () :=> pairs @_elements;
+    set_elements: t: table :=> {
+        @clear!;
+        for k, v in pairs t, @_elements #k = v;
     };
-    t #(len t + 1) = self;
-    => t;
+
+    each: f: function :=> >> for k, v in pairs @_elements, f k;
+    merge: (a: map, b: map) => reduce(a:shallow_copy!, tbl pairs b._elements, table.set);
+
 };
-```
 
-It compiles to the following Lua code (which I have formatted and annotated):
-
-```Lua
-string_mt.split = function(self, separator) 
-    if not is_subclass(self, (string_metatable())) then 
-        error("bad argument 'self' to " .. debug.getinfo(1, 'nl').name .. " (got " .. type(self) .. ")", 2) 
-    end;
-    __typecheck_arg(1, separator, "string");
-    local t = {  };
-    local i = self:index_of(separator);
-    while (i and ((i<((self:len()+1))))) do 
-        do 
-            t[((#(t)+1))] = self:slice(0, (i-1));
-            self = self:slice((i+separator:len()));
-            i = self:index_of(separator);
-        end 
-    end;
-    t[((#(t)+1))] = self;
-    do return t end 
-end;
-```
-
-Note that this is *not* a good example of what Jammy is good at. The following is a good example of what Jammy is good at:
-
-```rust
-array.first_index_of = item [array] :=> >> 
-    for i in range_inc len my._elements,
-        if my._elements #i == item, => i - 1;
-```
-
-```lua
--- Compiles to:
-array.first_index_of = function(self, item) 
-    if not is_subclass(self, (array)) then 
-        error("bad argument 'self' to " .. debug.getinfo(1, 'nl').name .. " (got " .. type(self) .. ")", 2) 
-    end;
-    for i = 1, #(self._elements) do 
-        if (self._elements[i]==item) then 
-            do return (i-1) end 
-        end 
-    end 
-end;
+=> tbl (map, typechecks);
 ```
 
 ## Installation
@@ -165,7 +146,7 @@ let sum_multiply = (a, numbers...) => a * sum ...numbers;
 Notice how you can have any number of parameters. When the function takes one parameter, it the parameter does not need to be parenthesized. A function can take variadic arguments if its last parameter ends with `...`. You can replace `=>` with `:=>` to prepend `self` (alias `my`) to the list of parameters. For example,
 ```javascript
 array.insert = x :=> {
-  table.insert(my.elements, x);
+  table.insert(@elements, x);
 };
 ```
 
@@ -219,13 +200,14 @@ vec2.__index = vec2;
 
 // constructor for a vector 2
 vec2.new = (x, y) => {
-    let instance = { };
+    let instance = { x: x, y: y };
     setmetatable(instance, vec2);
     return instance;
 }
 
 // makes sure that the given `self`'s metatable (or it's metatable's metatable, and so on) is `vec2`
-vec2.magnitude = () [vec2] :=> math.sqrt((my.x * my.x) + (my.y * my.y));
+// (@x is short for self.x, and likewise for @y)
+vec2.magnitude = () [vec2] :=> math.sqrt((@x * @x) + (@y * @y));
 ```
 
 Note that all these special safety features are not idiomatic to Jammy (because they take more time to write). They were added to facilitate writing a standard library, and I expect that type annotations will not be necessary during a game jam (Jammy's intended use-case).
@@ -295,6 +277,26 @@ a.b:c(1, 2, 3)
 a.b.c(a.b, 1, 2, 3)
 ```
 This is exactly the same as in Lua.
+
+When not using parentheses, functions are evaluated from right-to-left. For example,
+```lua
+print inspect table.length a:to_table!;
+```
+is equivalent to
+```lua
+print(inspect(table.length(a:to_table!)));
+```
+
+When not using parentheses, function calls have different precedence when used as an expression versus when used as a statement. See the two examples:
+```rust
+// These are equivalent
+print 1 + 2 + 3;
+print(1 + 2 + 3);
+
+// These are equivalent
+let x = sqrt 1 + 2 + 3;
+let x = sqrt(1) + 2 + 3;
+```
 
 ### If statements
 
@@ -517,45 +519,66 @@ The `use` statement is equivalent to Lua's `require` except for one thing: **the
 Jammy provides an easy way to create prototypes. Just follow this example:
 ```rust
 // vec2.jam
+use "std/types.jam";
 
-let vec2 = prototype!;
-
-vec2.constructor = (x: number, y: number) [vec2] :=> >> my.x, my.y = x, y;
-
-vec2.square_magnitude () [vec2] :=> (my.x * my.x) + (my.y * my.y);
-vec2.magnitude = () [vec2] :=> math.sqrt my:square_magnitude!;
-
-vec2.__tostring = () [vec2] :=> "(${my.x}, ${my.y})";
+prototype vec2 {
+    constructor: (x: number, y: number) :=> >> @x, @y = x, y;
+    square_magnitude: () :=> (@x * @x) + (@y * @y);
+    magnitude: () :=> math.sqrt @square_magnitude!;
+    __tostring: () :=> "(${@x}, ${@y})";
+};
 
 => vec2;
 ```
 `vec2` can then be used in another file like so:
 ```js
-let vec2 = use "vec2";
-let v = vec2(4, 5);
-print v;
-print v:magnitude!;
+let vec2 = import "vec2";
+let v = vec2(3, 4);
+print v; // prints (3, 4)
+print v:magnitude!; // prints 5
 ```
 
 Prototype inheritance can be done by supplying an argument to the `prototype` function. This argument is its super-prototype. An `extend` function exists which is an alias for `prototype` and can be used for inheritance. See the following example:
 
-```js
+```rust
 // vec3.jam
+use "std/types.jam";
 
-let vec3 = extend vec2;
-
-vec3.constructor = (x: number, y: number, z: number) [vec3] :=> {
-  super constructor(x, y);
-  my.z = z;
+prototype vec3 from vec2 {
+    constructor: (x: number, y: number, z: number) :=> {
+        super(x, y);
+        @z = z;
+    };
+    square_magnitude: () :=> super! + (@z * @z);
+    __tostring: () :=> "(${@x}, ${@y}, ${@z})";
 };
-
-vec3.square_magnitude () :=> super square_magnitude! + (my.z * my.z);
-
-vec3.__tostring = () :=> "(${my.x}, ${my.y}, ${my.z})";
 
 => vec3;
 ```
-As you can see, to override a method, simply declare an identical method in the subclass. To call the superclass' method from within the overriden method, you can use `super the_method(...)`.
+
+### @
+When a function is declared with `:=>`, then you can use `@` in it. `@` is equivalent to Lua's `self`. 
+
+In addition to simply being a variable, you can use it as a prefix for variables, and it will be an instance variable. For example, `@x` is equivalent to `self.x`. 
+
+Similarly, calling an `@` function will call a function on the instance, and ensure that the first argument passed is `self`. For example, `@square_magnitude!` is equivalent to `self:square_magnitude()` in Lua.
+
+### Super
+When a prototype inherits from another prototype, the method `super` can be used within its methods, and it will call the equivalent method in its parent prototype. For example,
+
+```rust
+prototype A { 
+    name: () => "A";
+};
+
+prototype B from A {
+    name: () => super! .. "B";
+};
+
+print B!:name!; // prints AB
+```
+
+When not used as a function, it simply refers to the parent class' object.
 
 ### Tables
 Jammy's syntax for tables is identical to Javascript's, only field names cannot be wrapped in quotation marks.
@@ -566,6 +589,7 @@ let x = {
   c: () => 7
 };
 ```
+Items in a table may be separated by either `,` or `;` and a separator is not needed for the last element. 
 
 ### Table length
 Jammy has two ways to determine a table's length. One is to use `len my_table`. This is equivalent to Lua's `#my_table`. The other, more reliable (but slower) way is to use a function that Jammy has added to Lua's standard library: `table.length`. This counts the number of keys in a table.
@@ -593,180 +617,172 @@ let a = luatable(
 print a #1 #"y"; // prints 5
 ```
 
-### `my` and `self`
-Jammy has two keywords, `my` and `self`, and they are both equivalent to Lua's `self`. You can use either of them interchangeably.
-
 ### Resolving truthy/falsy values
 To turn a truthy/falsy value to an explicit boolean, use `bool my_truthy_value`. It is equivalent to `not not my_truthy_value` in Lua.
 
 ## Example
 The following is the source code for Jammy's array class in the standard library.
 ```rust
-/** import_parameters {
-    "set": [ "array" ]
-} */
-
 use "std/types.jam";
 
-let array = prototype!;
+prototype array {
+    
+    constructor: elements... :=> >> @_elements = elements;
 
-array.__type = "array";
+    new: elements... => array ...elements;
 
-array.constructor = elements... [array] :=> >> my._elements = elements;
+    is_array: a => ((type a) == "table") && a.__type && (a.__type == "array");
 
-array.new = elements... => array ...elements;
+    from_table: t: table => array ...t;
 
-array.is_array = a => ((type a) == "table") && a.__type && (a.__type == "array");
+    __index: key: exists :=> 
+        if type key == "number", @_elements #(key + 1) 
+        else if key == "length", len @_elements
+        else array #key;
 
-array.from_table = t: table => array ...t;
+    __newindex: (key: exists, value) :=> >> 
+        if type key == "number", 
+            if (key < 0) || (key > @length), 
+                error "Attempt to set out-of-bounds index in array: ${key} -- Valid bounds are [0, ${@length})"
+            else @_elements #(key + 1) = value
+        else rawset(@, key, value);
 
-array.__index = key: exists [array] :=> 
-    if type key == "number", my._elements #(key + 1) 
-    else if key == "length", len my._elements
-    else array #key;
-
-array.__newindex = (key: exists, value) [array] :=> >> 
-    if type key == "number", 
-        if (key < 0) || (key > my.length), 
-            error "Attempt to set out-of-bounds index in array: ${key} -- Valid bounds are [0, ${my.length})"
-        else my._elements #(key + 1) = value
-    else rawset(self, key, value);
-
-array.__tostring = () [array] :=> {
-    let str = "[ ";
-    let n = len my._elements;
-    for i in range_inc n, {
-        str = str .. tostring my._elements #i;
-        if i < n, str = str .. ", ";
-    };
-    => str .. " ]";
-};
-
-array.count = () [array] :=> len my._elements;
-
-array.iter = () [array] :=> {
-    let i, n = 0, len my._elements;
-    => () => {
-        i = i + 1;
-        if i <= n, => my._elements #i;
-    };
-};
-
-array.ipairs = () [array] :=> {
-    let i, n = 0, len my._elements;
-    => () => {
-        i = i + 1;
-        if i <= n, => (i, my._elements #i);
-    };
-};
-
-array.first_index_of = item [array] :=> >> 
-    for i in range_inc len my._elements,
-        if my._elements #i == item, => i - 1;
-
-array.last_index_of = item [array] :=> >> 
-    for i in range_inc(len my._elements, 1, -1),
-        if my._elements #i == item, => i - 1;
-
-array.insert = (i: number, item: exists) [array] :=> >> table.insert(my._elements, i, item);
-
-array.push_bottom = (i: number, item: exists) [array] :=> >> table.insert(my._elements, 1, item);
-
-array.pop_bottom = (i: number, item: exists) [array] :=> >> table.remove(my._elements, 1);
-
-array.push = item: exists [array] :=> {
-    my._elements #(len my._elements + 1) = item;
-    => item;
-};
-
-array.pop = () [array] :=> {
-    let n = len my._elements;
-    let item = my._elements #n;
-    my._elements #n = nil;
-    => item;
-};
-
-array.remove_at = i: number [array] :=> table.remove(my._elements, i + 1);
-
-array.remove = item: exists [array] :=> >> for i, v in ipairs my._elements, if v == item, table.remove(my._elements, i);
-
-array.contains = item: exists [array] :=> bool >> for _, v in ipairs my._elements, if item == v, => true;
-array.has = array.contains;
-
-array.get_elements = () [array] :=> my._elements;
-
-array.shallow_copy = () [array] :=> array.from_table my._elements;
-
-array.equal_to = (a: array, b: array) => {
-    if len a._elements ~= len b._elements, => false;
-    for i in range_inc len a._elements,
-        if (a._elements #i) ~= (b.elements #i), => false;
-    => true;
-};
-
-array.slice = (start_index: number, end_index: number?) [array] :=> {
-    let sliced_table = tbl!;
-    start_index = start_index + 1;
-
-    if end_index == nil, end_index = len self._elements;
-
-    let j = 1;
-    for i in range_inc(start_index, end_index), {
-        sliced_table #j = my._elements #i;
-        j = j + 1;
+    __tostring: () :=> {
+        let str = "[ ";
+        let n = len @_elements;
+        for i in range_inc n, {
+            str = str .. tostring @_elements #i;
+            if i < n, str = str .. ", ";
+        };
+        => str .. " ]";
     };
 
-    => array.from_table sliced_table;
-};
+    count: () :=> len @_elements;
 
-array.concat = (a: array, b: array) => {
-    let c = a:shallow_copy!;
-    let a_n = len a._elements;
-    for i, v in b:ipairs!, c._elements #(a_n + i) = v;
-    => c;
-};
-
-array.clear = () [array] :=> >> for i in range_inc len my._elements, my._elements #i = nil;
-
-array.first = () [array] :=> my._elements #1;
-
-array.last = () [array] :=> my._elements #(len my._elements);
-
-array.head = array.first;
-
-array.tail = () [array] :=> self:slice 1;
-
-array.get = i: number [array] :=> my._elements #(i + 1);
-
-array.set_elements = t: table [array] :=> {
-    let t_n, my_n = len t._elements, len my._elements;
-    let i = 1;
-
-    while i <= t_n, {
-        my._elements #i = t._elements #i;
-        i = i + 1;
+    iter: () :=> {
+        let i, n = 0, len @_elements;
+        => () => {
+            i = i + 1;
+            if i <= n, => @_elements #i;
+        };
     };
 
-    while i <= my_n, {
-        my._elements #i = nil;
-        i = i + 1;
+    ipairs: () :=> {
+        let i, n = 0, len @_elements;
+        => () => {
+            i = i + 1;
+            if i <= n, => (i, @_elements #i);
+        };
     };
-};
 
-array.each_i = f: function [array] :=> >> for i, v in ipairs(my._elements), f(i, v); 
-array.each = f: function [array] :=> >> for i, v in ipairs(my._elements), f v; 
+    first_index_of: item :=> >> 
+        for i in range_inc len @_elements,
+            if @_elements #i == item, => i - 1;
 
-array.set = (i: number, item) [array] :=> {
-    if (i < 0) || (i >= my.length), 
-        error "Attempt to set out-of-bounds index in array: ${i} -- Valid bounds are [0, ${my.length})"
-    else {
-        my._elements #(i + 1) = item;
+    last_index_of: item :=> >> 
+        for i in range_inc(len @_elements, 1, -1),
+            if @_elements #i == item, => i - 1;
+
+    insert: (i: number, item: exists) :=> >> table.insert(@_elements, i, item);
+
+    push_bottom: (i: number, item: exists) :=> >> table.insert(@_elements, 1, item);
+
+    pop_bottom: (i: number, item: exists) :=> >> table.remove(@_elements, 1);
+
+    push: item: exists :=> {
+        @_elements #(len @_elements + 1) = item;
         => item;
     };
+
+    pop: () :=> {
+        let n = len @_elements;
+        let item = @_elements #n;
+        @_elements #n = nil;
+        => item;
+    };
+
+    remove_at: i: number :=> table.remove(@_elements, i + 1);
+
+    remove: item: exists :=> >> for i, v in ipairs @_elements, if v == item, table.remove(@_elements, i);
+
+    contains: item: exists :=> bool >> for _, v in ipairs @_elements, if item == v, => true;
+    has: array.contains;
+
+    get_elements: () :=> @_elements;
+
+    shallow_copy: () :=> array.from_table @_elements;
+
+    equal_to: (a: array, b: array) => {
+        if len a._elements ~= len b._elements, => false;
+        for i in range_inc len a._elements,
+            if (a._elements #i) ~= (b.elements #i), => false;
+        => true;
+    };
+
+    slice: (start_index: number, end_index: number?) :=> {
+        let sliced_table = tbl!;
+        start_index = start_index + 1;
+
+        if end_index == nil, end_index = len @_elements;
+
+        let j = 1;
+        for i in range_inc(start_index, end_index), {
+            sliced_table #j = @_elements #i;
+            j = j + 1;
+        };
+
+        => array.from_table sliced_table;
+    };
+
+    concat: (a: array, b: array) => {
+        let c = a:shallow_copy!;
+        let a_n = len a._elements;
+        for i, v in b:ipairs!, c._elements #(a_n + i) = v;
+        => c;
+    };
+
+    clear: () :=> >> for i in range_inc len @_elements, @_elements #i = nil;
+
+    first: () :=> @_elements #1;
+
+    last: () :=> @_elements #(len @_elements);
+
+    head: array.first;
+
+    tail: () :=> @slice 1;
+
+    get: i: number :=> @_elements #(i + 1);
+
+    set_elements: t: table :=> {
+        let t_n, my_n = len t._elements, len @_elements;
+        let i = 1;
+
+        while i <= t_n, {
+            @_elements #i = t._elements #i;
+            i = i + 1;
+        };
+
+        while i <= my_n, {
+            @_elements #i = nil;
+            i = i + 1;
+        };
+    };
+
+    each_i: f: function :=> >> for i, v in ipairs @_elements, f(i, v); 
+    each: f: function :=> >> for i, v in ipairs @_elements, f v; 
+
+    set: (i: number, item) :=> {
+        if (i < 0) || (i >= @length), 
+            error "Attempt to set out-of-bounds index in array: ${i} -- Valid bounds are [0, ${@length})"
+        else {
+            @_elements #(i + 1) = item;
+            => item;
+        };
+    };
+
+    unpack: () :=> ...@_elements;
+
 };
 
-array.unpack = () [array] :=> ...my._elements;
-
-=> tbl array;
-
+=> tbl (array, typechecks);
 ```

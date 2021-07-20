@@ -7,84 +7,85 @@
 use "std/iter.jam";
 use "std/types.jam";
 
-let string_mt = { };
-
 let string_metatable = () => getmetatable "";
 
-string_mt.char_at = i: number [string_metatable!] :=> self:sub(i, i);
+let string_mt = { 
 
-string_mt.__index = key: exists [string_metatable!] :=>
-    if type key == "number", self:sub(key, key)
-    else if key == "length", self:len!
-    else self #key;
+    char_at: i: number [string_metatable!] :=> @sub(i, i);
 
-string_mt.substring = string.sub;
-string_mt.slice = string.sub;
+    __index: key: exists [string_metatable!] :=>
+        if type key == "number", @sub(key, key)
+        else if key == "length", @len!
+        else @ #key;
 
-string_mt.concat = (a: string, b: string) => a .. b;
+    substring: string.sub;
+    slice: string.sub;
 
-string_mt.contains = str: string [string_metatable!] :=> bool self:find(str, 1, true);
+    concat: (a: string, b: string) => a .. b;
 
-string_mt.index_of = str: string [string_metatable!] :=> (tbl self:find(str, 1, true)) #1;
-string_mt.last_index_of = str: string [string_metatable!] :=> 1 + self:len! - self:reverse!:index_of str;
+    contains: str: string [string_metatable!] :=> bool @find(str, 1, true);
 
-string_mt.ends_with = str: string [string_metatable!] :=> self:sub(-str:len!, -1) == str;
-string_mt.starts_with = str: string [string_metatable!] :=> self:sub(1, str:len!) == str;
+    index_of: str: string [string_metatable!] :=> (tbl @find(str, 1, true)) #1;
+    last_index_of: str: string [string_metatable!] :=> 1 + @len! - @reverse!:index_of str;
 
-string_mt.match_all = str: string [string_metatable!] :=> table.from_iterator self:gmatch str;
+    ends_with: str: string [string_metatable!] :=> @sub(-str:len!, -1) == str;
+    starts_with: str: string [string_metatable!] :=> @sub(1, str:len!) == str;
 
-string_mt.pad_left = (total_length: number, char: string = " ") [string_metatable!] 
-    :=> char:repeat_times (total_length - self:len!) .. self;
+    match_all: str: string [string_metatable!] :=> table.from_iterator @gmatch str;
 
-string_mt.pad_right = (total_length: number, char: string = " ") [string_metatable!] 
-    :=> self .. char:repeat_times (total_length - self:len!);
+    pad_left: (total_length: number, char: string = " ") [string_metatable!] 
+        :=> char:repeat_times (total_length - @len!) .. @;
 
-string_mt.repeat_times = n: number [string_metatable!] 
-    :=> reduce("", tbl range_inc n, s => s .. self);
+    pad_right: (total_length: number, char: string = " ") [string_metatable!] 
+        :=> @ .. char:repeat_times (total_length - @len!);
 
-string_mt.escape_match = () [string_metatable!] :=> (tbl self:gsub ("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%1")) #1;
+    repeat_times: n: number [string_metatable!] 
+        :=> reduce("", tbl range_inc n, s => s .. @);
 
-string_mt.replace_first = (original: string, replacement: string) [string_metatable!]
-    :=> (tbl self:gsub(original:escape_match!, replacement, 1)) #1;
+    escape_match: () [string_metatable!] :=> (tbl @gsub ("[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%1")) #1;
 
-string_mt.replace_all = (original: string, replacement: string) [string_metatable!]
-    :=> self:gsub(original:escape_match!, replacement);
+    replace_first: (original: string, replacement: string) [string_metatable!]
+        :=> (tbl @gsub(original:escape_match!, replacement, 1)) #1;
 
-string_mt.count_instances = str: string [string_metatable!] 
-    :=> select(2, self:gsub(str:escape_match!, str:escape_match!));
+    replace_all: (original: string, replacement: string) [string_metatable!]
+        :=> @gsub(original:escape_match!, replacement);
 
-string_mt.split = separator: string [string_metatable!] :=> {
-    let t = { };
-    let i = self:index_of separator;
-    while i && (i < (self:len! + 1)), {
-        t #(len t + 1) = self:slice (0, i - 1);
-        self = self:slice(i + separator:len!);
-        i = self:index_of separator;
+    count_instances: str: string [string_metatable!] 
+        :=> select(2, @gsub(str:escape_match!, str:escape_match!));
+
+    split: separator: string [string_metatable!] :=> {
+        let t = { };
+        let i = @index_of separator;
+        while i && (i < (@len! + 1)), {
+            t #(len t + 1) = @slice (0, i - 1);
+            @ = @slice(i + separator:len!);
+            i = @index_of separator;
+        };
+        t #(len t + 1) = @;
+        => t;
     };
-    t #(len t + 1) = self;
-    => t;
-};
 
-string_mt.trim_left = () [string_metatable!] :=> self:match "^%s*(.-)$";
-string_mt.trim_right = () [string_metatable!] :=> self:match "^(.-)%s*$";
-string_mt.trim = () [string_metatable!] :=> self:match "^%s*(.-)%s*$";
+    trim_left: () [string_metatable!] :=> @match "^%s*(.-)$";
+    trim_right: () [string_metatable!] :=> @match "^(.-)%s*$";
+    trim: () [string_metatable!] :=> @match "^%s*(.-)%s*$";
 
-string_mt.chars = () [string_metatable!] :=> 
-    reduce({ }, tbl range_inc self:len!, (t, i) => >> t #i = self:sub(i, i));
+    chars: () [string_metatable!] :=> 
+        reduce({ }, tbl range_inc @len!, (t, i) => >> t #i = @sub(i, i));
 
-string_mt.iter = () [string_metatable!] :=> {
-    let i, n = 0, self:len!;
-    => () => {
-        i = i + 1;
-        if i <= n, => self:sub(i, i);
+    iter: () [string_metatable!] :=> {
+        let i, n = 0, @len!;
+        => () => {
+            i = i + 1;
+            if i <= n, => @sub(i, i);
+        };
     };
-};
 
-string_mt.ipairs = () [string_metatable!] :=> {
-    let i, n = 0, self:len!;
-    => () => {
-        i = i + 1;
-        if i <= n, => (i, self:sub(i, i));
+    ipairs: () [string_metatable!] :=> {
+        let i, n = 0, @len!;
+        => () => {
+            i = i + 1;
+            if i <= n, => (i, @sub(i, i));
+        };
     };
 };
 

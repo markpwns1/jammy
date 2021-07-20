@@ -4,9 +4,9 @@
 
 use "std/types.jam";
 
-let table_mt = { };
-
-table_mt.push = (t: table, v) => >> t #(len t + 1) = v;
-table_mt.set = (t: table, k: exists, v) => >> t #k = v;
+let table_mt = { 
+    push: (t: table, v) => >> t #(len t + 1) = v;
+    set: (t: table, k: exists, v) => >> t #k = v;
+};
 
 => tbl table_mt;

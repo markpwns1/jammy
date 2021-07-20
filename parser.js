@@ -220,6 +220,28 @@ exports.Parser = class Parser {
         return statements;
     }
 
+    identifierStatement() {
+        const head = this.index(false);
+        if(head.type == "method_call" || head.type == "self_method_call") {
+            return head;
+        }
+
+        const lchain = [ head ];
+        while(this.match("comma")) {
+            this.eat();
+            lchain.push(this.lhand());
+        }
+
+        this.eat("equals");
+
+        const rchain = this.expressionList();
+
+        return ast("var_assign", {
+            leftHand: lchain,
+            values: rchain
+        });
+    }
+
     statement() {
         const t = this.peek();
         switch(t.type) {
@@ -232,8 +254,33 @@ exports.Parser = class Parser {
                 });
             }
 
+            case "at": {
+                const funccall = this.tryMatch(() => {
+                    this.eat();
+                    this.eat("identifier");
+                    const f = this.fullFuncCall(false);
+                    if(!f) throw "nope";
+                }, () => {
+                    this.eat();
+                    const name = this.eat("identifier").value;
+                    const args = this.fullFuncCall(false);
+                    return ast("self_method_call", {
+                        left: {
+                            type: "variable",
+                            name: "self"
+                        },
+                        member: name,
+                        args: args
+                    });
+                });
+                if(funccall) return funccall;
+                else return this.identifierStatement();
+            }
+
             case "identifier": {
                 switch(t.value) {
+                    case "prototype": return this.prototype();
+
                     case "super": {
                         this.eat();
                         return this.super(false);
@@ -280,32 +327,13 @@ exports.Parser = class Parser {
                         return this.matchExpr(false);
                     }
 
-                    default: {
-                        const head = this.index(false);
-                        if(head.type == "method_call" || head.type == "self_method_call") {
-                            return head;
-                        }
-
-                        const lchain = [ head ];
-                        while(this.match("comma")) {
-                            this.eat();
-                            lchain.push(this.lhand());
-                        }
-
-                        this.eat("equals");
-
-                        const rchain = this.expressionList();
-
-                        return ast("var_assign", {
-                            leftHand: lchain,
-                            values: rchain
-                        });
-                    }
+                    default: return this.identifierStatement();
                 }
             }
 
             default: {
-                throw this.generateError("Expected a statement but got " + tts(t));
+                return this.funcCallStatement();
+                // throw this.generateError("Expected a statement but got " + tts(t));
             }
         }
     }
@@ -323,6 +351,21 @@ exports.Parser = class Parser {
             lchain.push(this.eat("identifier").value);
         }
         return lchain;
+    }
+
+    prototype() {
+        this.eat();
+        const name = this.eat("identifier").value;
+        let extending;
+        if(this.matchIdentifier("from")) {
+            extending = this.eat("identifier").value;
+        }
+        const table = this.table(["semicolon"]);
+        return ast("class", {
+            name: name,
+            extending: extending,
+            table: table
+        });
     }
 
     letStmt() {
@@ -379,9 +422,16 @@ exports.Parser = class Parser {
 
     lhand() {
         const chain = this.index(false);
-        console.log(chain);
         if(chain.type != "index_key" && chain.type != "index_object" && chain.type != "variable") {
             throw this.generateError("The left-hand of an assignment must end in a field, variable, or index");
+        }
+        return chain;
+    }
+
+    funcCallStatement() {
+        const chain = this.index(false);
+        if(chain.type != "method_call" && chain.type != "self_method_call") {
+            throw this.generateError("Expected a function call but got " + tts(this.peek()));
         }
         return chain;
     }
@@ -720,6 +770,8 @@ exports.Parser = class Parser {
     }
 
     funcCall(isExpr = true) {
+        if(this.match("identifier") && KEYWORDS.includes(this.peek().value)) return;
+        
         if(isExpr) {
             const binary = this.tryMatch(this.binary, () => {
                 if(!this.match("minus")) {
@@ -753,11 +805,35 @@ exports.Parser = class Parser {
         const errorMessage = "a value or expression"
 
         const t = this.expect(
-            ["number", "string", "identifier", "open_paren", "open_square", "open_curly" ],
+            ["at", "number", "string", "identifier", "open_paren", "open_square", "open_curly" ],
             errorMessage
         );
 
         switch (t.type) {
+
+            case "at": {
+                this.eat();
+                if(this.match("identifier")) {
+                    const name = this.eat("identifier").value;
+                    const args = this.tryMatch(() => this.fullFuncCall(true), () => this.fullFuncCall(true));
+                    if(args) {
+                        return ast("self_method_call", {
+                            left: {
+                                type: "variable",
+                                name: "self"
+                            },
+                            member: name,
+                            args: args
+                        });
+                    }
+                    else return ast("variable", {
+                        name: "self." + name
+                    });
+                }
+                else return ast("variable", {
+                    name: "self"
+                });
+            }
 
             case "open_curly": return this.table();
 
@@ -844,9 +920,9 @@ exports.Parser = class Parser {
 
                     case "nil": return ast("nil");
 
-                    case "my": return ast("variable", {
-                        name: "self"
-                    });
+                    // case "my": return ast("variable", {
+                    //     name: "self"
+                    // });
 
                     default: {
                         this.back();
@@ -922,7 +998,7 @@ exports.Parser = class Parser {
         };
     }
 
-    table() {
+    table(separators = [ "comma", "semicolon" ]) {
         this.eat("open_curly");
 
         if(this.match("close_curly")) {
@@ -935,8 +1011,11 @@ exports.Parser = class Parser {
         const entries = [ ];
         if(this.match("identifier")) {
             entries.push(this.tableKey());
-            while(this.match("comma")) {
+            while(this.match(...separators)) {
                 this.eat();
+
+                if(this.match("close_curly")) break;
+                
                 entries.push(this.tableKey());
             }
         }
@@ -1079,11 +1158,16 @@ exports.Parser = class Parser {
     }
 
     super(isExpr = true) {
-        const name = this.eat("identifier").value;
+        // const name = this.eat("identifier").value;
+
+        if(!isExpr) {
+            const val = this.tryNotMatch(this.fullFuncCall, () => ast("super_value"));
+            if(val) return val;
+        }
+
         const args = this.fullFuncCall(isExpr);
 
         return ast("super_call", {
-            name: name,
             args: args
         });
     }

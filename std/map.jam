@@ -6,33 +6,31 @@ use "std/iter.jam";
 use "std/types.jam";
 use "std/table.jam";
 
-let map = prototype!;
-map.__type = "map";
+prototype map {
 
-typechecks.map = types.generate_from_prototype map;
+    constructor: (t: table = { }) :=> >> @_elements = t;
 
-map.constructor = (t: table = { }) [map] :=> >> my._elements = t;
+    set: (k: exists, v) :=> >> @_elements #k = v;
+    get: k: exists :=> @_elements #k;
+    has: k: exists :=> bool @_elements #k;
+    remove: k: exists :=> >> @_elements #k = nil;
+    clear: () :=> >> for k, v in pairs @_elements, @_elements #k = nil;
 
-map.set = (k: exists, v) [map] :=> >> my._elements #k = v;
-map.get = k: exists [map] :=> my._elements #k;
-map.has = k: exists [map] :=> bool my._elements #k;
-map.remove = k: exists [map] :=> >> my._elements #k = nil;
-map.clear = () [map] :=> >> for k, v in pairs my._elements, my._elements #k = nil;
+    size: () :=> reduce(0, tbl pairs @_elements, n => n + 1);
+    keys: () :=> reduce({ }, tbl pairs @_elements, table.push);
+    values: () :=> reduce({ }, tbl pairs @_elements, (t, k, v) => >> t #(len t + 1) = v);
 
-map.size = () [map] :=> reduce(0, tbl pairs my._elements, n => n + 1);
-map.keys = () [map] :=> reduce({ }, tbl pairs my._elements, table.push);
-map.values = () [map] :=> reduce({ }, tbl pairs my._elements, (t, k, v) => >> t #(len t + 1) = v);
+    to_table: () :=> reduce({ }, tbl pairs @_elements, table.set);
+    shallow_copy: () :=> map @to_table!;
+    pairs: () :=> pairs @_elements;
+    set_elements: t: table :=> {
+        @clear!;
+        for k, v in pairs t, @_elements #k = v;
+    };
 
-map.to_table = () [map] :=> reduce({ }, tbl pairs my._elements, table.set);
-map.shallow_copy = () [map] :=> map self:to_table!;
-map.pairs = () [map] :=> pairs my._elements;
-map.set_elements = t: table [map] :=> {
-    self:clear!;
-    for k, v in pairs t, my._elements #k = v;
+    each: f: function :=> >> for k, v in pairs @_elements, f k;
+    merge: (a: map, b: map) => reduce(a:shallow_copy!, tbl pairs b._elements, table.set);
+
 };
 
-map.each = f: function [set] :=> >> for k, v in pairs my._elements, f k;
-map.merge = (a: map, b: map) 
-    => reduce(a:shallow_copy!, tbl pairs b._elements, table.set);
-
-=> tbl map;
+=> tbl (map, typechecks);

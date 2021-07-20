@@ -1,107 +1,106 @@
 /** import_parameters {
-    "set": [ "set" ]
+    "set": [ "set", "typechecks" ]
 } */
 
 use "std/types.jam";
 use "std/table.jam";
 use "std/iter.jam";
 
-let set = prototype!;
-set.__type = "set";
+prototype set {
 
-typechecks.set = types.generate_from_prototype set;
-
-set.constructor = elements... [set] :=> {
-    my._elements = { };
-    for k, v in pairs elements, my._elements #v = true;
-};
-
-set.new = elements... => set ...elements;
-
-set.contains = e: exists [set] :=> my._elements #e == true;
-set.has = set.contains;
-
-set.add = e: exists [set] :=> >> my._elements #e = true;
-
-set.remove = e: exists [set] :=> >> my._elements #e = nil;
-
-set.size = () [set] :=> table.length(my._elements);
-set.cardinality = set.size;
-
-set.strict_subset = (a: set, b: set) => {
-    if a:size! >= b:size!, => false;
-    for k, _ in pairs a._elements, if !(b._elements #k), => false;
-    => true;
-};
-
-set.subset = (a: set, b: set) => {
-    if a:size! > b:size!, => false;
-    for k, _ in pairs a._elements, if !(b._elements #k), => false;
-    => true;
-};
-
-set.equal_to = (a: set, b: set) => {
-    if a:size! ~= b:size!, => false;
-    for k, _ in pairs a._elements, if !(b._elements #k), => false;
-    => true;
-};
-
-set.superset = (a: set, b: set) => b:subset a;
-set.strict_superset = (a: set, b: set) => b:strict_subset a;
-set.superset_eq = (a: set, b: set) => b:subset a;
-
-set.iter = () [set] :=> {
-    let elements = self:to_table!;
-    let n = len elements;
-    let i = 0;
-    => () => {
-        i = i + 1;
-        if i <= n, => elements #i;
+    constructor: elements... :=> {
+        @_elements = { };
+        for k, v in pairs elements, @_elements #v = true;
     };
-};
 
-set.to_table = () [set] :=> reduce({ }, tbl pairs my._elements, table.push);
+    new: elements... => set ...elements;
 
-set.shallow_copy = () [set] :=> set ...self:to_table!;
+    contains: e: exists :=> @_elements #e == true;
+    has: set.contains;
 
-set.clear = () [set] :=> >> for x in self:iter!, my._elements #x = nil;
+    add: e: exists :=> >> @_elements #e = true;
 
-set.set_elements = t: set [set] :=> {
-    self:clear!;
-    for item in t:iter!, my._elements #item = true;
-};
+    remove: e: exists :=> >> @_elements #e = nil;
 
-set.__tostring = () [set] :=> {
-    let str = "{ ";
-    let i, n = 0, table.length my._elements;
-    for k, _ in pairs my._elements, {
-        str = str .. tostring k;
-        i = i + 1;
-        if i < n, str = str .. ", ";
+    size: () :=> table.length @_elements;
+    cardinality: set.size;
+
+    strict_subset: (a: set, b: set) => {
+        if a:size! >= b:size!, => false;
+        for k, _ in pairs a._elements, if !(b._elements #k), => false;
+        => true;
     };
-    => str .. " }";
+
+    subset: (a: set, b: set) => {
+        if a:size! > b:size!, => false;
+        for k, _ in pairs a._elements, if !(b._elements #k), => false;
+        => true;
+    };
+
+    equal_to: (a: set, b: set) => {
+        if a:size! ~= b:size!, => false;
+        for k, _ in pairs a._elements, if !(b._elements #k), => false;
+        => true;
+    };
+
+    superset: (a: set, b: set) => b:subset a;
+    strict_superset: (a: set, b: set) => b:strict_subset a;
+    superset_eq: (a: set, b: set) => b:subset a;
+
+    iter: () :=> {
+        let elements = @to_table!;
+        let n = len elements;
+        let i = 0;
+        => () => {
+            i = i + 1;
+            if i <= n, => elements #i;
+        };
+    };
+
+    to_table: () :=> reduce({ }, tbl pairs @_elements, table.push);
+
+    shallow_copy: () :=> set ...@to_table!;
+
+    clear: () :=> >> for x in @iter!, @_elements #x = nil;
+
+    set_elements: t: set :=> {
+        @clear!;
+        for item in t:iter!, @_elements #item = true;
+    };
+
+    __tostring: () :=> {
+        let str = "{ ";
+        let i, n = 0, table.length @_elements;
+        for k, _ in pairs @_elements, {
+            str = str .. tostring k;
+            i = i + 1;
+            if i < n, str = str .. ", ";
+        };
+        => str .. " }";
+    };
+
+    each: f: function :=> >> for k, v in pairs(@_elements), f k;
+
+    union: (a: set, b: set) => {
+        let c = a:shallow_copy!;
+        for x in b:iter!, c._elements #x = true;
+        => c;
+    };
+
+    intersect: (a: set, b: set) => {
+        let c = set!;
+        for x in a:iter!, if b._elements #x, c._elements #x = true;
+        => c;
+    };
+
+    difference: (a: set, b: set) => {
+        let c = a:shallow_copy!;
+        for x in b:iter!, c._elements #x = nil;
+        => c;
+    };
+
+    unpack: () :=> ...@to_table!;
+
 };
 
-set.each = f: function [set] :=> >> for k, v in pairs(my._elements), f k;
-
-set.union = (a: set, b: set) => {
-    let c = a:shallow_copy!;
-    for x in b:iter!, c._elements #x = true;
-    => c;
-};
-
-set.intersect = (a: set, b: set) => {
-    let c = set!;
-    for x in a:iter!, if b._elements #x, c._elements #x = true;
-    => c;
-};
-
-set.difference = (a: set, b: set) => {
-    let c = a:shallow_copy!;
-    for x in b:iter!, c._elements #x = nil;
-    => c;
-};
-
-set.unpack = () [set] :=> ...self:to_table!;
-
-=> tbl set;
+=> tbl (set, typechecks);
