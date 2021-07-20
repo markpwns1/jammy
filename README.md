@@ -556,6 +556,19 @@ prototype vec3 from vec2 {
 => vec3;
 ```
 
+Note that declaring a prototype automatically registers its type with the type checker, so it can be used in type annotations. However, this addition to the type checker is only local to that file. To export the type, make sure to either monkey-patch (NOT recommended, and not Jammy's style) using `_G.typechecks = typechecks`, or use the module system and export `typechecks` along with your type (this is the proper way). For example:
+```rust
+/** import_parameters {
+  "set": [ "vec2", "typechecks" ]
+} */
+
+prototype vec2 {
+    // ...
+}
+
+=> tbl (vec2, typechecks)
+```
+
 ### @
 When a function is declared with `:=>`, then you can use `@` in it. `@` is equivalent to Lua's `self`. 
 
