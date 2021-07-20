@@ -701,7 +701,8 @@ exports.Parser = class Parser {
 
         const chain = [ ];
 
-        while (this.match("dot", "colon", "pound", "open_paren", "excl")) {
+        let shouldBreak = false;
+        while (!shouldBreak && this.match("dot", "colon", "pound", "open_paren", "excl")) {
             const t = this.eat();
             switch(t.type) {
                 case "dot": {
@@ -742,9 +743,15 @@ exports.Parser = class Parser {
                 }
 
                 case "excl": {
-                    chain.push(ast("method_call", {
-                        args: [ ]
-                    }));
+                    if(!this.tryNotMatch(this.unary, () => {
+                        chain.push(ast("method_call", {
+                            args: [ ]
+                        }));
+                        return true;
+                    })) {
+                        this.back();
+                        shouldBreak = true;
+                    }
                     break;
                 }
 
