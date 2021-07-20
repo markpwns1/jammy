@@ -14,7 +14,7 @@ Note: it is expected that a Jammy programmer has a reasonable level of experienc
 - All with minimal overhead, and compiling to straightforward Lua code
 
 ## Sample
-The following is the `first_index_of` function in the `array` class added by Jammy's standard library. Almost all of Jammy's standard library is written in Jammy (made possible by the quality of the code generation).
+The following is the `map` class added by Jammy's standard library. Almost all of Jammy's standard library is written in Jammy (made possible by the quality of the code generation).
 
 ```rust
 /** import_parameters {
