@@ -44,7 +44,7 @@ function objectFlip(obj) {
 }
 
 function leftify(x) {
-    if(x.right.right) {
+    if(x.right.type == "binary_op" && x.right.right) {
         const r = x.right;
         x.right = r.left;
         r.left = x;

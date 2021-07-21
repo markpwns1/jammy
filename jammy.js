@@ -31,7 +31,9 @@ const current_scope = () => scopes[scopes.length - 1];
 const method_stack = [ ];
 
 let current_filename;
+
 let export_typechecks = false;
+let export_count = 0;
 
 let output = "";
 
@@ -407,8 +409,7 @@ const get_import_params = p => {
                 i++;
             }
             else {
-                while(tokens[i].type != "semicolon" && tokens[i].type != "EOF" && i < tokens.length) {
-                    
+                while(i < tokens.length && tokens[i].type != "semicolon" && tokens[i].type != "EOF") {
                     i++;
                 }
                 i++;
@@ -421,7 +422,8 @@ const get_import_params = p => {
 };
 
 evaluators.export = ast => {
-    return "exports[#exports+1] = " + ast.value + " -- to be imported as '" + ast.as + "'\n";
+    export_count++;
+    return "exports[" + export_count + "] = " + ast.value + " -- to be imported as '" + ast.as + "'";
 }
 
 evaluators.use = ast => {
@@ -640,6 +642,7 @@ const preface = luamin.minify(fs.readFileSync(join_path(__dirname, "jammy_header
 
 const compile = (filename, mode = "file") => {
     export_typechecks = false;
+    export_count = 0;
     let txt = "-- " + filename + " - GENERATED " + new Date().toLocaleString() + "\n";
     current_filename = filename;
     txt += "-- JAMMY BOILERPLATE\n";

@@ -116,13 +116,13 @@ exports.Scanner = class Scanner {
         if(c == "/") {
             if(this.peek(1) == "/") {
                 this.skip(2);
-                while(this.peek() != "\n") this.eat();
+                while(this.offset < this.source.length && this.peek() != "\n") this.eat();
                 return;
             }
             else if(this.peek(1) == "*") {
                 this.skip(2);
                 let depth = 1;
-                while(depth > 0) {
+                while(this.offset < this.source.length && depth > 0) {
                     if(this.peek() == "/" && this.peek(1) == "*") {
                         this.skip(2);
                         depth++;
