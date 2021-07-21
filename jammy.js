@@ -368,7 +368,28 @@ const get_import_params = p => {
     let parsed = { };
     try { 
         parsed = JSON.parse(content); 
+
+        const scanner = new Scanner();
+        const tokens = scanner.scan(file_contents);
+
+        const protos = [ ];
+
+        let i = 0;
+        do {
+            if(tokens[i].type == "identifier" && tokens[i].value == "export") {
+                i++;
+                if(!parsed.exports) parsed.exports = [ ];
+                parsed.exports.push(tokens[i].value);
+                i++;
+            }
+            else {
+                while(tokens[i].type != "semicolon" && tokens[i].type != "EOF") i++;
+                i++;
+            }
+        } while(i < tokens.length);
+
     } catch { };
+
     return parsed;
 };
 
