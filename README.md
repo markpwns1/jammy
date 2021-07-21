@@ -16,10 +16,7 @@ Note: it is expected that a Jammy programmer has a reasonable level of experienc
 ## Sample
 The following is the `map` class added by Jammy's standard library. Almost all of Jammy's standard library is written in Jammy (made possible by the quality of the code generation).
 
-```rust
-/** import_parameters {
-    "set": [ "map", "typechecks" ]
-} */
+```lua
 
 use "std/iter.jam";
 use "std/types.jam";
@@ -52,7 +49,8 @@ prototype map {
 
 };
 
-=> tbl (map, typechecks);
+export map;
+
 ```
 
 ## Installation
@@ -467,43 +465,68 @@ use "std/array.jam"; // import the array class
 
 print array.new(1, 2, 3); // prints [ 1, 2, 3 ]
 
-import "test.jam"; // execute test.jam
+import "test"; // execute test.jam
 ```
 ```rust
 // test.jam
 print array.new(1, 2, 3); // error, because std/array.jam has not been imported in this file.
 ```
 
-To write modules compatible with `use`, simply create a file with some Lua code, and prepend an `import_parameters` section.
-```js
-/** import_parameters {
-  parameters go here...
-} */
+To write modules compatible with `use`, simply create a file with some Lua code, and export whatever you like, by using the `export` keyword. For example,
+
+```rust
+// hello.jam
+let hello = () => print "Hello world!";
+
+export hello;
 ```
-There are several import parameters that your module can set. The import parameters are in JSON format.
+```rust
+// main.jam
+use "hello.jam";
+hello!; // prints Hello world!
+```
 
-`set: string[]` -- Upon importing the module, creates the following local variables, and assigns them to the elements of a table you return. Take the following example:
+To export something so that it has a different name in the importing file, do `export something as something_else;`. With the example above, you can do this:
+
+```rust
+// hello.jam
+let hello = () => print "Hello world!";
+
+export hello as hello_world;
+```
+```rust
+// main.jam
+use "hello.jam";
+hello_world!; // prints Hello world!
+hello!; // error
+```
+
+For those who would like to use Jammy to write Lua libraries, how export works is that a compiled .jam file returns a table of the things that were exported, in order along with a special variable called `typechecks` as the first element, which can be safely ignored if you're using Lua. However, if ). For example:
+
 ```js
-/** import_parameters {
-  "set": [ "get_five", "get_six", "get_seven" ]
-} */
-
-// number_funcs.jam
+// numbers.jam
 
 let get_five = () => 5;
 let get_six = () => 6;
 let get_seven = () => 7;
 
-=> tbl(get_five, get_six, get_seven)
+export get_five;
+export get_six;
+export get_seven;
 ```
 
-```rust
-// main.jam
-
-use "number_funcs.jam";
-
-print get_five! + get_six! + get_seven!; // prints 18
+```lua
+-- main.lua
+local get_five, get_six, get_seven = unpack(require("numbers.lua")) -- numbers.lua is the compiled numbers.jam
 ```
+
+There are also some import parameters that your module can set to change (via the `import_parameters` section) the way that your module is imported. The import parameters are in JSON format. In order to work properly, the import parameters section **must** be the first thing in your file, excluding whitespace.
+```js
+/** import_parameters {
+  parameters go here...
+} */
+```
+There is only one import parameter at the moment:
 
 `append: string` -- Injects the specified Lua code directly after the module is loaded. For example:
 ```js
@@ -512,8 +535,8 @@ print get_five! + get_six! + get_seven!; // prints 18
   "append": "print('Hello world')"
 } */
 
-// my_cool_module.jam
-// ...
+let add = (a, b) => a + b;
+// module stuff, etc...
 ```
 ```rust
 
@@ -525,7 +548,7 @@ The `use` statement is equivalent to Lua's `require` except for one thing: **the
 
 ### Prototypes
 Jammy provides an easy way to create prototypes. Just follow this example:
-```rust
+```lua
 // vec2.jam
 use "std/types.jam";
 
@@ -536,11 +559,11 @@ prototype vec2 {
     __tostring: () :=> "(${@x}, ${@y})";
 };
 
-=> vec2;
+export vec2;
 ```
 `vec2` can then be used in another file like so:
-```js
-let vec2 = import "vec2";
+```rust
+use "vec2.jam";
 let v = vec2(3, 4);
 print v; // prints (3, 4)
 print v:magnitude!; // prints 5
@@ -551,6 +574,7 @@ Prototype inheritance can be done by supplying an argument to the `prototype` fu
 ```rust
 // vec3.jam
 use "std/types.jam";
+use "vec2.jam";
 
 prototype vec3 from vec2 {
     constructor: (x: number, y: number, z: number) :=> {
@@ -561,20 +585,7 @@ prototype vec3 from vec2 {
     __tostring: () :=> "(${@x}, ${@y}, ${@z})";
 };
 
-=> vec3;
-```
-
-Note that declaring a prototype automatically registers its type with the type checker, so it can be used in type annotations. However, this addition to the type checker is only local to that file. To export the type, make sure to either monkey-patch (NOT recommended, and not Jammy's style) using `_G.typechecks = typechecks`, or use the module system and export `typechecks` along with your type (this is the proper way). For example:
-```rust
-/** import_parameters {
-  "set": [ "vec2", "typechecks" ]
-} */
-
-prototype vec2 {
-    // ...
-}
-
-=> tbl (vec2, typechecks)
+export vec3;
 ```
 
 ### @
@@ -644,6 +655,7 @@ To turn a truthy/falsy value to an explicit boolean, use `bool my_truthy_value`.
 ## Example
 The following is the source code for Jammy's array class in the standard library.
 ```rust
+
 use "std/types.jam";
 
 prototype array {
@@ -805,5 +817,6 @@ prototype array {
 
 };
 
-=> tbl (array, typechecks);
+export array;
+
 ```

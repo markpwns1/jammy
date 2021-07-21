@@ -383,6 +383,7 @@ const get_import_params = p => {
         const protos = [ ];
 
         let i = 0;
+        let include_typechecks = false;
         do {
             if(tokens[i].type == "identifier" && tokens[i].value == "export") {
                 i++;
@@ -398,9 +399,10 @@ const get_import_params = p => {
                     i++;
                 }
 
-                if(protos.includes(name) && !parsed.exports.includes("typechecks")) {
-                    parsed.exports.unshift("typechecks");
+                if(protos.includes(name)) {
+                    include_typechecks = true;
                 }
+                
                 parsed.exports.push(as);
             }
             else if(tokens[i].type == "identifier" && tokens[i].value == "prototype") {
@@ -415,8 +417,12 @@ const get_import_params = p => {
                 i++;
             }
         } while(i < tokens.length);
-
+        if(include_typechecks) {
+            parsed.exports.push("typechecks");
+        }
     } catch { };
+
+    
 
     return parsed;
 };
@@ -672,7 +678,7 @@ const compile = (filename, mode = "file") => {
         
     txt += "\n-- END JAMMY BOILERPLATE\n";
 
-    const translated = translate(filename) + (export_typechecks? " table.insert(exports, 1, typechecks);" : "") + "return exports;";
+    const translated = translate(filename) + (export_typechecks? (" exports[" + (++export_count) + "] = typechecks") : "") + " return exports;";
 
     if(translated)
         return minify? luamin.minify(txt + translated) : (txt + translated.replace(/; /g, ";\n"));
