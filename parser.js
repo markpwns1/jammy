@@ -640,11 +640,11 @@ exports.Parser = class Parser {
     }
 
     tryExpr(isExpr = true) {
-        const body = isExpr? this.statement() : this.expression();
+        const body = isExpr? this.expression() : this.statement();
 
         let onFail;
         if(this.matchIdentifier("else")) {
-            onFail = isExpr? this.statement() : this.expression();
+            onFail = isExpr? this.expression() : this.statement();
         }
 
         return ast(isExpr? "try_expr" : "try_stmt", {
@@ -693,12 +693,13 @@ exports.Parser = class Parser {
                         return this.ifExpr(true);
                     }
                     case "try": {
-                        return this.tryExpr();
+                        return this.tryExpr(true);
                     }
                     case "match": {
                         return this.matchExpr(true);
                     }
                     case "for": {
+                        this.back();
                         return this.forLoop(true);
                     }
                 }

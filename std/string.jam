@@ -12,10 +12,13 @@ let string_mt = {
 
     char_at: i: number [string_metatable!] :=> @sub(i, i);
 
-    __index: key: exists [string_metatable!] :=>
-        if type key == "number", @sub(key, key)
+    __index: key: exists [string_metatable!] :=> {
+        print "AAAA";
+        => if type key == "number", @sub(key, key)
         else if key == "length", @len!
         else @ #key;
+    };
+        
 
     substring: string.sub;
     slice: string.sub;
