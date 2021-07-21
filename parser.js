@@ -675,21 +675,17 @@ exports.Parser = class Parser {
                     case "len": return ast("len", {
                         value: this.unary()
                     });
-                    
+
                     case "if": {
-                        this.back();
                         return this.ifExpr(true);
                     }
                     case "try": {
-                        this.back();
                         return this.tryExpr();
                     }
                     case "match": {
-                        this.back();
                         return this.matchExpr(true);
                     }
                     case "for": {
-                        this.back();
                         return this.forLoop(true);
                     }
                 }
