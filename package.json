@@ -5,8 +5,7 @@
   "main": "jammy.js",
   "dependencies": {
     "commander": "^8.0.0",
-    "luamin": "^1.0.4",
-    "pegjs": "^0.10.0"
+    "luamin": "^1.0.4"
   },
   "devDependencies": {},
   "scripts": {

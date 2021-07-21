@@ -374,7 +374,7 @@ const get_import_params = p => {
 
 evaluators.use = ast => {
     const lua_path = without_file_extension(ast.path).toString().replace(/\\/g, '/');
-    const real_path = join_path(__dirname, ast.path);
+    const real_path = join_path(ast.path.startsWith("std/")? __dirname : path.dirname(current_filename), ast.path);
     const params = get_import_params(real_path);
 
     let txt = "";
