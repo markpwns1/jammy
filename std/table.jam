@@ -1,6 +1,3 @@
-/** import_parameters {
-    "set": [ "table" ]
-} */
 
 use "std/types.jam";
 
@@ -9,4 +6,4 @@ let table_mt = {
     set: (t: table, k: exists, v) => >> t #k = v;
 };
 
-=> tbl table_mt;
+export table_mt as table;

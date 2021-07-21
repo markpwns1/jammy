@@ -1,6 +1,5 @@
 
 /** import_parameters {
-    "set": [ "number", "iter", "reduce", "table" ],
     "append": "debug.setmetatable(0, { __index = function(t, k) return __env.number[k] end })"
 } */
 
@@ -8,7 +7,7 @@ use "std/types.jam";
 
 let number = { };
 
-// let number_metatable = () => getmetatable 0;
+let number_metatable = () => getmetatable 0;
 
 number.times_inc = f: function [number_metatable!] :=> >> for i in range_inc @, f i;
 number.times = f: function [number_metatable!] :=> >> for i in range @, f i;
@@ -61,4 +60,7 @@ table_mt.from_iterator = (itr: function, invar, var) => {
     => t;
 };
 
-=> tbl(number, iter, reduce, table_mt);
+export number;
+export iter;
+export reduce;
+export table_mt;

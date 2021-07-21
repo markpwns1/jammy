@@ -279,6 +279,19 @@ exports.Parser = class Parser {
 
             case "identifier": {
                 switch(t.value) {
+                    case "export": {
+                        this.eat();
+                        const name = this.eat("identifier").value;
+                        let as = name;
+                        if(this.matchIdentifier("as")) {
+                            as = this.eat("identifier").value;
+                        }
+                        return ast("export", {
+                            value: name,
+                            as: as
+                        });
+                    }
+
                     case "prototype": return this.prototype();
 
                     case "super": {

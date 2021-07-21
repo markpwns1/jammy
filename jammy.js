@@ -31,6 +31,7 @@ const current_scope = () => scopes[scopes.length - 1];
 const method_stack = [ ];
 
 let current_filename;
+let export_typechecks = false;
 
 let output = "";
 
@@ -85,6 +86,7 @@ evaluators.self_method_call = ast => {
 }
 
 evaluators.class = ast => {
+    export_typechecks = true;
     const superproto = ast.extending || "nil";
     let txt = `local ${ast.name};`
     txt += `do `;
@@ -128,7 +130,7 @@ evaluators.class = ast => {
     }).join("");
     
     txt += "end ";
-    txt += `local typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and (arg.__class==${ast.name}) end }) `;
+    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and (arg.__class==${ast.name}) end }) `;
     
     return txt;
 };
@@ -353,24 +355,74 @@ const get_import_params = p => {
     if(cached_modules[p]) return cached_modules[p];
     
     const file_contents = fs.readFileSync(p, "utf-8").trim();
-    if(!file_contents.startsWith("/** import_parameters")) {
-        cached_modules[p] = { };
-        return;
-    }
+    // if(!file_contents.startsWith("/** import_parameters")) {
+    //     cached_modules[p] = { };
+    //     return;
+    // }
 
-    let i = 21;
+    const has_import_params = file_contents.startsWith("/** import_parameters");
     let content = "";
-    while ((i < file_contents.length - 1) && (file_contents[i] != "*" || file_contents[i + 1] != "/")) {
-        content += file_contents[i];
-        i++;
+    if(has_import_params) {
+        let i = 21;
+        while ((i < file_contents.length - 1) && (file_contents[i] != "*" || file_contents[i + 1] != "/")) {
+            content += file_contents[i];
+            i++;
+        }
     }
 
     let parsed = { };
     try { 
-        parsed = JSON.parse(content); 
+        if(has_import_params)
+            parsed = JSON.parse(content); 
+
+        const scanner = new Scanner();
+        const tokens = scanner.scan(file_contents);
+
+        const protos = [ ];
+
+        let i = 0;
+        do {
+            if(tokens[i].type == "identifier" && tokens[i].value == "export") {
+                i++;
+                if(!parsed.exports) parsed.exports = [ ];
+
+                const name = tokens[i].value;
+                i++;
+
+                let as = name;
+                if(tokens[i].type == "identifier" && tokens[i].value == "as") {
+                    i++;
+                    as = tokens[i].value;
+                    i++;
+                }
+
+                if(protos.includes(name) && !parsed.exports.includes("typechecks")) {
+                    parsed.exports.unshift("typechecks");
+                }
+                parsed.exports.push(as);
+            }
+            else if(tokens[i].type == "identifier" && tokens[i].value == "prototype") {
+                i++;
+                protos.push(tokens[i].value);
+                i++;
+            }
+            else {
+                while(tokens[i].type != "semicolon" && tokens[i].type != "EOF" && i < tokens.length) {
+                    
+                    i++;
+                }
+                i++;
+            }
+        } while(i < tokens.length);
+
     } catch { };
+
     return parsed;
 };
+
+evaluators.export = ast => {
+    return "exports[#exports+1] = " + ast.value + " -- to be imported as '" + ast.as + "'\n";
+}
 
 evaluators.use = ast => {
     const lua_path = without_file_extension(ast.path).toString().replace(/\\/g, '/');
@@ -382,8 +434,8 @@ evaluators.use = ast => {
         `require(path_join(__root_dir, "${lua_path}"):gsub(\"/\", \".\"))`
         : `import("${lua_path}")`;
     
-    if(params.set && params.set.length > 0) {
-        txt += "local " + params.set.join(", ") + " = __import(" + (params.set.length) + ", {" + params.set.join(", ") + "}, " + the_import + ");" + params.set.map(x => "__env." + x).join(", ") + " = " + params.set.join(", ");
+    if(params.exports && params.exports.length > 0) {
+        txt += "local " + params.exports.join(", ") + " = __import(" + (params.exports.length) + ", {" + params.exports.join(", ") + "}, " + the_import + ");" + params.exports.map(x => "__env." + x).join(", ") + " = " + params.exports.join(", ");
     }
     else {
         txt += the_import;
@@ -587,6 +639,7 @@ const translate = filename => {
 const preface = luamin.minify(fs.readFileSync(join_path(__dirname, "jammy_header.lua"), "utf-8"));
 
 const compile = (filename, mode = "file") => {
+    export_typechecks = false;
     let txt = "-- " + filename + " - GENERATED " + new Date().toLocaleString() + "\n";
     current_filename = filename;
     txt += "-- JAMMY BOILERPLATE\n";
@@ -612,11 +665,11 @@ const compile = (filename, mode = "file") => {
         txt += preface + "; ";
     }
     
-    txt += "__env = { };setmetatable(__env, { __index = _G });";
+    txt += "local exports={};__env = {};setmetatable(__env, { __index = _G });";
         
     txt += "\n-- END JAMMY BOILERPLATE\n";
 
-    const translated = translate(filename);
+    const translated = translate(filename) + (export_typechecks? " table.insert(exports, 1, typechecks);" : "") + "return exports;";
 
     if(translated)
         return minify? luamin.minify(txt + translated) : (txt + translated.replace(/; /g, ";\n"));

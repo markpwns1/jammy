@@ -1,6 +1,3 @@
-/** import_parameters {
-    "set": [ "set", "typechecks" ]
-} */
 
 use "std/types.jam";
 use "std/table.jam";
@@ -103,4 +100,4 @@ prototype set {
 
 };
 
-=> tbl (set, typechecks);
+export set;
