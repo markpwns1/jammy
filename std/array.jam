@@ -1,6 +1,3 @@
-/** import_parameters {
-    "set": [ "array", "typechecks" ]
-} */
 
 use "std/types.jam";
 
@@ -163,4 +160,4 @@ prototype array {
 
 };
 
-=> tbl (array, typechecks);
+export array;

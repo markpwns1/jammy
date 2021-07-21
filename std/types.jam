@@ -1,13 +1,3 @@
-/** import_parameters {
-    "set": [ 
-        "__typecheck", 
-        "__typecheck_arg", 
-        "__typecheck_arg_optional", 
-        "__typecheck_arg_union", 
-        "__typecheck_arg_union_optional", 
-        "types" 
-    ]
-} */
 
 let primitives = {
     nil: true,
@@ -53,11 +43,9 @@ typechecks.int = typechecks.int || (x => (type x == "number") && (math.fmod(x, 1
 typechecks.positive = typechecks.positive || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x >= 0);
 typechecks.natural = typechecks.natural || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x > 0);
 
-=> tbl (
-    __typecheck, 
-    __typecheck_arg, 
-    __typecheck_arg_optional, 
-    __typecheck_arg_union, 
-    __typecheck_arg_union_optional, 
-    types
-);
+export __typecheck;
+export __typecheck_arg;
+export __typecheck_arg_optional;
+export __typecheck_arg_union;
+export __typecheck_arg_union_optional;
+export types;

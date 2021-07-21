@@ -1,6 +1,3 @@
-/** import_parameters {
-    "set": [ "map" ]
-} */
 
 use "std/iter.jam";
 use "std/types.jam";
@@ -33,4 +30,4 @@ prototype map {
 
 };
 
-=> tbl (map, typechecks);
+export map;

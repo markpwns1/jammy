@@ -1,6 +1,5 @@
 
 /** import_parameters {
-    "set": [ "string" ],
     "append": "debug.setmetatable(\"\", { __index = function(t, k) return __env.string[k] end })"
 } */
 
@@ -89,5 +88,5 @@ let string_mt = {
     };
 };
 
-=> tbl string_mt;
+export string_mt as string;
 

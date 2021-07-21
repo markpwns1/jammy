@@ -281,8 +281,14 @@ exports.Parser = class Parser {
                 switch(t.value) {
                     case "export": {
                         this.eat();
+                        const name = this.eat("identifier").value;
+                        let as = name;
+                        if(this.matchIdentifier("as")) {
+                            as = this.eat("identifier").value;
+                        }
                         return ast("export", {
-                            value: this.eat("identifier").value
+                            value: name,
+                            as: as
                         });
                     }
 
