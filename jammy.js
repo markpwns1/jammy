@@ -227,15 +227,17 @@ evaluators.unary_op = ast => {
 evaluators.var_dec = ast => {
     let f_vars = [ ];
     let f_vals = [ ];
-    for (let i = ast.values.length - 1; i > -1; i--) {
-        const val = ast.values[i];
-        if(val.type == "function") {
-            f_vars.push(ast.variables[i]);
-            f_vals.push(val);
-            ast.variables.splice(i, 1);
-            ast.values.splice(i, 1);
+    if(ast.values) {
+        for (let i = ast.values.length - 1; i > -1; i--) {
+            const val = ast.values[i];
+            if(val.type == "function") {
+                f_vars.push(ast.variables[i]);
+                f_vals.push(val);
+                ast.variables.splice(i, 1);
+                ast.values.splice(i, 1);
+            }
         }
-    }
+    } 
 
     let txt = "";
     if(ast.variables.length > 0) {
