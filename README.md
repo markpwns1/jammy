@@ -369,6 +369,14 @@ for i in range(20, 15, -2), print i; // prints 20 to 16 inclusive, going down by
 ```
 While it `range` appears to be an iterator function, fear not. Jammy compiles this to a simple `for i=start, end, step do` loop, so there is no performance overhead. There also exists `range_inc` which is `range` but the "end" value is inclusive. `range_inc` also starts at 1 unless directed otherwise. 
 
+For loops can also be used as an expression. Take the following example:
+```rust
+// tbl(a, b, c, etc...) creates a Lua table with its arguments.
+// for-in as an expression returns whatever the loop body returns, as a tuple
+// so this expression is equivalent to tbl(1, 2, 3, etc...)
+let t = tbl for i in range_inc 10, i;
+```
+
 There is also a namespace called `std.iter` which you can use for some useful iterating tools (these however, do not compile to anything special and incur a very slight performance cost compared to `range`). Take the following example:
 ```rust
 use "std.iter";
