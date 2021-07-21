@@ -225,9 +225,29 @@ evaluators.unary_op = ast => {
 };
 
 evaluators.var_dec = ast => {
-    let txt = "local " + ast.variables.join(", ");
-    if (ast.values)
-        txt += " = " + ast.values.map(x => evaluate(x)).join(", ");
+    let f_vars = [ ];
+    let f_vals = [ ];
+    for (let i = ast.values.length - 1; i > -1; i--) {
+        const val = ast.values[i];
+        if(val.type == "function") {
+            f_vars.push(ast.variables[i]);
+            f_vals.push(val);
+            ast.variables.splice(i, 1);
+            ast.values.splice(i, 1);
+        }
+    }
+
+    let txt = "";
+    if(ast.variables.length > 0) {
+        txt = "local " + ast.variables.join(", ");
+        if (ast.values)
+            txt += " = " + ast.values.map(x => evaluate(x)).join(", ");
+    }
+    
+    if(f_vars.length > 0) {
+        txt += (ast.variables.length > 0? ";" : "") + "local " + f_vars.join(", ") + ";" + f_vars.join(", ") + " = " + f_vals.map(x => evaluate(x)).join(", ");
+    }
+
     return txt;
 }
 
@@ -421,8 +441,6 @@ const get_import_params = p => {
             parsed.exports.push("typechecks");
         }
     } catch { };
-
-    
 
     return parsed;
 };
