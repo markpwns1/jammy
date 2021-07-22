@@ -381,14 +381,14 @@ exports.Parser = class Parser {
         });
     }
 
-    letStmt() {
+    letStmt(valueRequired = false) {
         this.eat();
         
         const lchain = this.identifierList();
 
         let rchain;
-        if(this.match("equals")) {
-            this.eat();
+        if(valueRequired || this.match("equals")) {
+            this.eat("equals");
             rchain = this.expressionList();
         }
         
@@ -550,24 +550,29 @@ exports.Parser = class Parser {
     }
 
     matchExpr(isExpr = true) {
-        const val = this.expression();
-        this.eat("comma");
+        let var_decs;
+        if(this.match("open_paren")) {
+            this.eat();
+            var_decs = this.letStmt(true);
+            this.eat("close_paren");
+        }
+
         this.eat("open_curly");
 
         const cases = [ ];
         const body = isExpr? this.expression.bind(this) : this.statement.bind(this);
         const sep = isExpr? "comma" : "semicolon";
 
-        while (true) {
-            let c;
-            let varCase = this.tryMatch(() => {
+        while (!this.match("close_curly")) {
+
+            let condition = this.tryMatch(() => {
                 this.eat("identifier");
                 this.eat("arrow");
                 body();
                 this.expect([ sep, "close_curly" ]);
             }, this.variable);
 
-            varCase = varCase || this.tryMatch(() => {
+            condition = condition || this.tryMatch(() => {
                 this.eat("open_paren");
                 this.eat("identifier");
                 this.eat("close_paren");
@@ -581,18 +586,16 @@ exports.Parser = class Parser {
                 return v;
             });
 
-            if(varCase) {
-                c = varCase;
-            }
-            else {
-                c = this.expression();
+            if(!condition){
+                condition = this.expression();
             }
 
             this.eat("arrow");
+            const value = body();
 
             cases.push({
-                case: c,
-                value: body()
+                condition: condition,
+                value: value
             });
 
             if(this.match(sep)) {
@@ -605,22 +608,95 @@ exports.Parser = class Parser {
             else {
                 break;
             }
-        } 
+        }
 
         let def;
         if(this.matchIdentifier("else")) {
-            def = this.expression();
+            def = body();
         }
 
         if(this.match(sep)) this.eat();
         this.eat("close_curly");
 
         return ast(isExpr? "match_expr" : "match_stmt", {
-            value: val,
             cases: cases,
-            default: def
+            default: def,
+            var_decs: var_decs
         });
     }
+
+    // matchExpr(isExpr = true) {
+    //     const val = this.expression();
+    //     this.eat("comma");
+    //     this.eat("open_curly");
+
+    //     const cases = [ ];
+    //     const body = isExpr? this.expression.bind(this) : this.statement.bind(this);
+    //     const sep = isExpr? "comma" : "semicolon";
+
+    //     while (true) {
+    //         let c;
+    //         let varCase = this.tryMatch(() => {
+    //             this.eat("identifier");
+    //             this.eat("arrow");
+    //             body();
+    //             this.expect([ sep, "close_curly" ]);
+    //         }, this.variable);
+
+    //         varCase = varCase || this.tryMatch(() => {
+    //             this.eat("open_paren");
+    //             this.eat("identifier");
+    //             this.eat("close_paren");
+    //             this.eat("arrow");
+    //             body();
+    //             this.expect([ sep, "close_curly" ]);
+    //         }, () => {
+    //             this.eat("open_paren");
+    //             const v = this.variable();
+    //             this.eat("close_paren");
+    //             return v;
+    //         });
+
+    //         if(varCase) {
+    //             c = varCase;
+    //         }
+    //         else {
+    //             c = this.expression();
+    //         }
+
+    //         this.eat("arrow");
+
+    //         cases.push({
+    //             case: c,
+    //             value: body()
+    //         });
+
+    //         if(this.match(sep)) {
+    //             this.eat();   
+    //             if(this.matchIdentifier("else")) {
+    //                 this.back();
+    //                 break;
+    //             }
+    //         }
+    //         else {
+    //             break;
+    //         }
+    //     } 
+
+    //     let def;
+    //     if(this.matchIdentifier("else")) {
+    //         def = this.expression();
+    //     }
+
+    //     if(this.match(sep)) this.eat();
+    //     this.eat("close_curly");
+
+    //     return ast(isExpr? "match_expr" : "match_stmt", {
+    //         value: val,
+    //         cases: cases,
+    //         default: def
+    //     });
+    // }
 
     ifExpr(isExpr = true) {
         const condition = this.expression();

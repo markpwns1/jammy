@@ -113,28 +113,24 @@ exports.Scanner = class Scanner {
             return;
         }
 
-        if(c == "/") {
-            if(this.peek(1) == "/") {
-                this.skip(2);
-                while(this.offset < this.source.length && this.peek() != "\n") this.eat();
-                return;
-            }
-            else if(this.peek(1) == "*") {
-                this.skip(2);
+        if(c == "-" && this.peek(1) == "-") {
+            if(this.peek(2) == "[") {
+                this.skip(3);
                 let depth = 1;
                 while(this.offset < this.source.length && depth > 0) {
-                    if(this.peek() == "/" && this.peek(1) == "*") {
-                        this.skip(2);
+                    if(this.peek() == "[") {
                         depth++;
                     }
-                    else if(this.peek() == "*" && this.peek(1) == "/") {
-                        this.skip(2);
+                    else if(this.peek() == "]") {
                         depth--;
                     }
-                    else {
-                        this.eat();
-                    }
+                    this.eat();
                 }
+                return;
+            }
+            else {
+                this.skip(2);
+                while(this.offset < this.source.length && this.peek() != "\n") this.eat();
                 return;
             }
         }

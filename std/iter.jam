@@ -1,7 +1,7 @@
 
-/** import_parameters {
+--[ import_parameters {
     "append": "debug.setmetatable(0, { __index = function(t, k) return __env.number[k] end })"
-} */
+} ]
 
 use "std/types.jam";
 

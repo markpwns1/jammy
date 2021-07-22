@@ -262,16 +262,21 @@ evaluators.brackets = ast => {
 };
 
 evaluators.match_stmt = ast => {
-    let txt = "local __match_val = " + evaluate(ast.value) + "; " + ast.cases.map(x => "if (__match_val) == (" + evaluate(x.case) + ") then " + evaluate(x.value) + " else").join("")
+    if(ast.cases.length <= 0) return "";
+
+    let txt = "do ";
+    if(ast.var_decs) txt += evaluate(ast.var_decs) + " ";
+    txt += ast.cases.map(x => "if " + evaluate(x.condition) + " then " + evaluate(x.value) + " else").join("")
     if(ast.default) {
         txt += " " + evaluate(ast.default);
     }
-    return txt + " end";
+    return txt + " end end";
 }
 
 evaluators.match_expr = (ast, simplify = false) => {
-    let txt = "local __match_val = " + evaluate(ast.value) + "; ";
-    txt += ast.cases.map(x => "if __match_val == (" + evaluate(x.case) + ") then " + evaluate_functiony(x.value) + " else").join("")
+    let txt = "";
+    if(ast.var_decs) txt += evaluate(ast.var_decs) + " ";
+    txt += ast.cases.map(x => "if " + evaluate(x.condition) + " then " + evaluate_functiony(x.value) + " else").join("")
     if(ast.default) {
         txt += " " + evaluate_functiony(ast.default);
     }
@@ -379,19 +384,23 @@ const get_import_params = p => {
     if(cached_modules[p]) return cached_modules[p];
     
     const file_contents = fs.readFileSync(p, "utf-8").trim();
-    // if(!file_contents.startsWith("/** import_parameters")) {
+    // if(!file_contents.startsWith("--[ import_parameters")) {
     //     cached_modules[p] = { };
     //     return;
     // }
 
-    const has_import_params = file_contents.startsWith("/** import_parameters");
+    const has_import_params = file_contents.startsWith("--[ import_parameters");
     let content = "";
     if(has_import_params) {
         let i = 21;
-        while ((i < file_contents.length - 1) && (file_contents[i] != "*" || file_contents[i + 1] != "/")) {
+        let depth = 1;
+        while ((i < file_contents.length) && depth > 0) {
+            if(file_contents[i] == "[") depth++;
+            else if(file_contents[i] == "]") depth--;
             content += file_contents[i];
             i++;
         }
+        content = content.slice(0, content.length - 1);
     }
 
     let parsed = { };
@@ -666,14 +675,8 @@ const translate = filename => {
 
 const preface = luamin.minify(fs.readFileSync(join_path(__dirname, "jammy_header.lua"), "utf-8"));
 
-const compile = (filename, mode = "file") => {
-    export_typechecks = false;
-    export_count = 0;
-    let txt = "-- " + filename + " - GENERATED " + new Date().toLocaleString() + "\n";
-    current_filename = filename;
-    txt += "-- JAMMY BOILERPLATE\n";
-
-    // IMPLEMENTS "use"
+const jammy_boilerplate = mode => {
+    let txt = "";
     if(mode == "love_entry_point") {
         txt += `local import = require;__root_dir = "";`;
     }
@@ -687,8 +690,17 @@ const compile = (filename, mode = "file") => {
     
         txt += `local function import(path) return require(path_join(__parent_dir, path):gsub("/", ".")) end;`;    
     }
-    
-    // ----------------
+    return txt;
+}
+
+const compile = (filename, mode = "file") => {
+    export_typechecks = false;
+    export_count = 0;
+    let txt = "-- " + filename + " - GENERATED " + new Date().toLocaleString() + "\n";
+    current_filename = filename;
+    txt += "-- JAMMY BOILERPLATE\n";
+
+    txt += jammy_boilerplate(mode);
 
     if(mode == "library" || mode == "entry_point" || mode == "love_entry_point") {
         txt += preface + "; ";
@@ -790,15 +802,16 @@ const src_dir = program.args[1].replace(/\\/g, "/");
 const out_dir = program.args[2].replace(/\\/g, "/");;
 
 const options = program.opts();
-const entry_file = options.entry.replace(/\\/g, "/");
+let entry_file = options.entry.replace(/\\/g, "/");
 const minify = options.minify;
 
 compiled_entry_point = false;
+entry_file = compile_mode == "love"? "main.jam" : entry_file;
 
 console.log("Compiling '" + src_dir + "' ...");
 compile_dir(src_dir, out_dir, {
     compile_mode: compile_mode,
-    entry_file: compile_mode == "love"? "main.jam" : entry_file
+    entry_file: entry_file
 });
 
 // console.log(options);
@@ -809,5 +822,26 @@ if((compile_mode == "program" || compile_mode == "love") && options.std) {
     });
 }
 
-if((compile_mode == "program" || compile_mode == "library") && !compiled_entry_point)
-    console.log(" * NOTE: The entry file '" + entry_file + "' was not found, and was not compiled.");
+if((compile_mode == "program" || compile_mode == "love") && !compiled_entry_point) {
+    const lua_entrypoint = without_file_extension(entry_file) + ".lua";
+    if(fs.existsSync(join_path(src_dir, lua_entrypoint))) {
+        let txt = "-- " + lua_entrypoint + " - GENERATED " + new Date().toLocaleString() + "\n";
+        txt += "-- JAMMY BOILERPLATE\n";
+
+        let mode = compile_mode == "program"? "entry_point" : "love_entry_point";
+
+        txt += jammy_boilerplate(mode);
+
+        if(mode == "library" || mode == "entry_point" || mode == "love_entry_point") {
+            txt += preface + "; ";
+        }
+        
+        txt += "\n-- END JAMMY BOILERPLATE\n";
+
+        txt += fs.readFileSync(join_path(src_dir, lua_entrypoint), "utf-8");
+
+        fs.writeFileSync(join_path(out_dir, lua_entrypoint), txt);
+        console.log(" * NOTE: The entry file '" + entry_file + "' was not found, but a Lua equivalent, " + lua_entrypoint + ", was found. Jammy will assume that this is the entry point");
+    }
+    else console.log(" * NOTE: The entry file '" + entry_file + "' was not found, and was not compiled.");
+}

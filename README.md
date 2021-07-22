@@ -86,6 +86,33 @@ Run `jammy library src out` to compile an entire directory *as a library.* This 
 ## Language
 Jammy is a very wacky language, and quite unreadable, but at least it's fast to write.
 
+<!-- ### Cheat sheet
+```lua
+
+-- Single line comment
+
+--[
+  Multiline comment
+  --[
+    (They support nesting)
+  ]
+]
+
+let x;
+let a, b, c = 1, 2, 3;
+
+-- Function calls with one argument need no parentheses
+print "Hello world!";
+print("Hello world!");
+print("Hello", "World!");
+
+-- Function calls with no arguments use a !
+print!;
+
+if a == 1 && (b ~= 3 || c == 1), print "Hello world!";
+
+``` -->
+
 ### Semantics
 Order of operations is abolished. All binary operators will be evaluated left-to-right. For example, `5 + 6 * 2` is equivalent to the following Lua code `(5 + 6) * 2`. Besides that, there are no semantic differences to Lua, only syntax differences and additional features.
 
@@ -101,7 +128,7 @@ ${5 + 6}"
 ```
 
 ### Comments
-Single-line comments start with a `//` like in C-style languages. Multi-line comments similarly start with `/*` and end with `*/`. Nested multi-line comments are supported.
+Single-line comments start with a `//` like in C-style languages. Multi-line comments similarly start with `--[` and end with `]`. Nested multi-line comments are supported.
 
 ### Variables
 Variables are declared using the `let` statement. Any variable declared this way will be local.
@@ -152,14 +179,14 @@ This is very important: **a function takes an EXPRESSION directly after the arro
 
 You can also specify types for the arguments, and they will be checked at runtime, and throw errors like Lua standard library functions do if their arguments are incorrect. In order to use this feature, you have to `use "std/types.jam";`
 
-```rust
+```lua
 use "std/types.jam";
 
 let add = (a: number, b: number) => a + b;
 
-print add(5, 6); // prints 11
+print add(5, 6); -- prints 11
 print add("hello", 6); 
-/*
+--[
 lua: out/main.lua:6: bad argument #1 to add (number expected, got string)
 stack traceback:
         [C]: in function 'error'
@@ -167,7 +194,7 @@ stack traceback:
         out/main.lua:6: in function 'add'
         out/main.lua:8: in main chunk
         [C]: ?
-*/
+]
 ```
 
 Types can also have unions and be optional. Union types are denoted by multiple types separated by `|`. For example:
@@ -192,19 +219,19 @@ If the last parameter is variadic, it **cannot** have type annotations or defaul
 
 To typecheck `self`, include an expression between `[ ]` before the `:=>` and Jammy will throw an error if the given `self`'s metatable chain does not contain that expression. For example:
 
-```rust
+```lua
 let vec2 = { };
 vec2.__index = vec2;
 
-// constructor for a vector 2
+-- constructor for a vector 2
 vec2.new = (x, y) => {
     let instance = { x: x, y: y };
     setmetatable(instance, vec2);
     return instance;
 }
 
-// makes sure that the given `self`'s metatable (or it's metatable's metatable, and so on) is `vec2`
-// (@x is short for self.x, and likewise for @y)
+-- makes sure that the given `self`'s metatable (or it's metatable's metatable, and so on) is `vec2`
+-- (@x is short for self.x, and likewise for @y)
 vec2.magnitude = () [vec2] :=> math.sqrt((@x * @x) + (@y * @y));
 ```
 
@@ -224,11 +251,11 @@ A return statement *must* return *one* expression. If you do not want to return 
 
 ### Turning statements into expressions
 Some syntactic constructs in Jammy explicitly require an expression. A function is an example of such a construct. A **block** may be used to execute statements and then return a value. A block can be used as a statement or an expression, meaning it can be used anywhere. A block is defined like so:
-```javascript
+```lua
 {
   let a = 5;
   let b = 6;
-  // more statements ...
+  -- more statements ...
   => a + b;
 }
 ```
@@ -286,12 +313,12 @@ print(inspect(table.length(a:to_table!)));
 ```
 
 When not using parentheses, function calls have different precedence when used as an expression versus when used as a statement. See the two examples:
-```rust
-// These are equivalent
+```lua
+-- These are equivalent
 print 1 + 2 + 3;
 print(1 + 2 + 3);
 
-// These are equivalent
+-- These are equivalent
 let x = sqrt 1 + 2 + 3;
 let x = sqrt(1) + 2 + 3;
 ```
@@ -314,30 +341,31 @@ The commas are obligatory.
 
 ### Match statements
 
-Match statements are used like so:
+Match statements are pretty much shortcuts for if-statements with lots of else-ifs. Any expression may be used as a condition for a match case. See the following examples on how to use `match` statements.
 ```rust
-let x = 5;
-match x, {
-  "hello" => print "goodbye";
-  5 => print "x is five";
-  else print "x is neither 'hello' nor 5";
+match {
+  x == "hello" => print "goodbye";
+  y < 2 => print "y is less than 2";
+  else print "neither of the cases matched";
 };
 
-print match x, {
-  "hello" => "goodbye",
-  5 => "x is five",
-  else "x is neither 'hello' nor 5"
+print match {
+  x == "hello" => "goodbye",
+  y < 2 => "y is less than 2",
+  else "neither of the cases matched"
 };
 ```
-The `else` case is optional. Notice the subtle differences between `match` used as a statement as opposed to an expression. As a statement, the body of each case must be a statement, and they must end in a semucolon, whereas as an expression, the body of each case must be an expression and each case is separated by a comma.
+The `else` case is optional. Notice the subtle differences between `match` used as a statement as opposed to an expression. As a statement, the body of each case must be a statement, and they must end in a semicolon, whereas as an expression, the body of each case must be an expression and each case is separated by a comma.
 
-Also, the match cases need not be constant values. You can do things like
+For long chains and variable names, `match` provides a shortcut to easily alias them.
 ```rust
-match x, {
-  5 + 6 => // ...
-  a! => // ...
+match (let x, y = a.very_long:chain_of!, long:long!:expressions!) {
+  x == "hello" => print "goodbye";
+  y < 2 => print "y is less than 2";
+  else print "neither of the cases matched";
 };
 ```
+This will save you from having to type the name of the expression each time, and also it will only evaluate the expressions once.
 
 ### While loops
 Surely while loops need no introduction. In Jammy they can only be statements. They execute the statement directly after the condition.
@@ -360,34 +388,34 @@ The comma between the condition and the body are optional.
 
 Jammy has some generators that can be used with for-in loops. For example:
 ```lua
-for in range 10, print "!"; // prints 10 exclamation marks
-for i in range 10, print i; // prints 0 to 9 inclusive
-for i in range(5, 10), print i; // prints 5 to 9 inclusive
-for i in range(20, 15, -2), print i; // prints 20 to 16 inclusive, going down by 2
+for in range 10, print "!"; -- prints 10 exclamation marks
+for i in range 10, print i; -- prints 0 to 9 inclusive
+for i in range(5, 10), print i; -- prints 5 to 9 inclusive
+for i in range(20, 15, -2), print i; -- prints 20 to 16 inclusive, going down by 2
 ```
 While it `range` appears to be an iterator function, fear not. Jammy compiles this to a simple `for i=start, end, step do` loop, so there is no performance overhead. There also exists `range_inc` which is `range` but the "end" value is inclusive. `range_inc` also starts at 1 unless directed otherwise. 
 
 For loops can also be used as an expression. Take the following example:
 ```rust
-// tbl(a, b, c, etc...) creates a Lua table with its arguments.
-// for-in as an expression returns whatever the loop body returns, as a tuple
-// so this expression is equivalent to tbl(1, 2, 3, etc...)
+-- tbl(a, b, c, etc...) creates a Lua table with its arguments.
+-- for-in as an expression returns whatever the loop body returns, as a tuple
+-- so this expression is equivalent to tbl(1, 2, 3, etc...)
 let t = tbl for i in range_inc 10, i;
 ```
 
 There is also a namespace called `std.iter` which you can use for some useful iterating tools (these however, do not compile to anything special and incur a very slight performance cost compared to `range`). Take the following example:
-```rust
+```lua
 use "std.iter";
 
-// n:times(fn) is a function which executes the given function n times
-// supplying i to the function. The two below statements print the numbers from 0 to 9.
+-- n:times(fn) is a function which executes the given function n times
+-- supplying i to the function. The two below statements print the numbers from 0 to 9.
 10:times i => print i;
 10:times print;
 
-// prints 5 to 9.
+-- prints 5 to 9.
 5:to(10, i => print i);
 
-// Each of these functions have _inc versions with inclusive boundaries
+-- Each of these functions have _inc versions with inclusive boundaries
 ```
 
 ### `break` and `continue`
@@ -395,29 +423,29 @@ Within a loop, `break` can be used to stop the loop immediately, and `continue` 
 
 ### Try-else statements
 Try-else statements attempt to perform an expression or statement, and gracefully exit or return a value upon error.
-```rust
-// does nothing, exits as soon as the error occurs
+```lua
+-- does nothing, exits as soon as the error occurs
 try {
   this_function_does_not_exist!
   print "Hello world!"
 }
 
-// prints that other message
+-- prints that other message
 try {
   this_function_does_not_exist!
   print "Hello world!"
 }
 else print "Oh no, something went wrong!"
 
-let x = try this_function_does_not_exist!; // x becomes nil
-let y = try this_function_does_not_exist! else 5; // x becomes 5
+let x = try this_function_does_not_exist!; -- x becomes nil
+let y = try this_function_does_not_exist! else 5; -- x becomes 5
 ```
 
 ### Tuples
 Any expression can return multiple values by using a tuple. Tuples are declared like so `(1, "hello", b, ...)`. Take the following example:
 ```rust
 let a, b = if true, (1, 2) else (3, 4);
-print(a, b); // prints 5 6
+print(a, b); -- prints 5 6
 ```
 Note that tuples are NOT a data structure, they are simply a mechanism for returning multiple values. The following does not do what one would expect:
 ```rust
@@ -431,11 +459,11 @@ The standard library contains a handy `array` class. You can declare arrays usin
 let my_array = [ "A", "B", "C" ];
 ```
 You can do cool stuff with the array such as:
-```javascript
-print my_array #0 // prints A -- yes, arrays are zero-indexed
-print my_array // prints [ A, B, C ]
-print my_array:contains 2 // prints false
-my_array:pop! // removes the last element
+```lua
+print my_array #0 -- prints A -- yes, arrays are zero-indexed
+print my_array -- prints [ A, B, C ]
+print my_array:contains 2 -- prints false
+my_array:pop! -- removes the last element
 ```
 Feel free to inspect the source code of `std/array.jam` to see its full functionality. 
 
@@ -448,7 +476,7 @@ Any standard Lua array-like table can be unpacked, equivalent to calling the Lua
 ```rust
 let x = tbl(1, 2, 3);
 let add_three = (a, b, c) => a + b + c;
-print add_three ...x; // prints 6
+print add_three ...x; -- prints 6
 ```
 
 ### Modules
@@ -459,52 +487,52 @@ let vec2 = import "../../libraries/vec2";
 
 `use` is slightly more complicated. `use` is a statement, not an expression. It is used to include code from other files, but unlike simply using Lua's `require` as a statement, `use` **does not** monkey patch. Anything included is only added to the current file. For example,
 
-```rust
-// main.jam
-use "std/array.jam"; // import the array class
+```lua
+-- main.jam
+use "std/array.jam"; -- import the array class
 
-print array.new(1, 2, 3); // prints [ 1, 2, 3 ]
+print array.new(1, 2, 3); -- prints [ 1, 2, 3 ]
 
-import "test"; // execute test.jam
+import "test"; -- execute test.jam
 ```
-```rust
-// test.jam
-print array.new(1, 2, 3); // error, because std/array.jam has not been imported in this file.
+```lua
+-- test.jam
+print array.new(1, 2, 3); -- error, because std/array.jam has not been imported in this file.
 ```
 
 To write modules compatible with `use`, simply create a file with some Lua code, and export whatever you like, by using the `export` keyword. For example,
 
-```rust
-// hello.jam
+```lua
+-- hello.jam
 let hello = () => print "Hello world!";
 
 export hello;
 ```
-```rust
-// main.jam
+```lua
+-- main.jam
 use "hello.jam";
-hello!; // prints Hello world!
+hello!; -- prints Hello world!
 ```
 
 To export something so that it has a different name in the importing file, do `export something as something_else;`. With the example above, you can do this:
 
-```rust
-// hello.jam
+```lua
+-- hello.jam
 let hello = () => print "Hello world!";
 
 export hello as hello_world;
 ```
-```rust
-// main.jam
+```lua
+-- main.jam
 use "hello.jam";
-hello_world!; // prints Hello world!
-hello!; // error
+hello_world!; -- prints Hello world!
+hello!; -- error
 ```
 
 For those who would like to use Jammy to write Lua libraries, how export works is that a compiled .jam file returns a table of the things that were exported, in order along with a special variable called `typechecks` as the first element, which can be safely ignored if you're using Lua. However, if ). For example:
 
 ```js
-// numbers.jam
+-- numbers.jam
 
 let get_five = () => 5;
 let get_six = () => 6;
@@ -521,27 +549,27 @@ local get_five, get_six, get_seven = unpack(require("numbers.lua")) -- numbers.l
 ```
 
 There are also some import parameters that your module can set to change (via the `import_parameters` section) the way that your module is imported. The import parameters are in JSON format. In order to work properly, the import parameters section **must** be the first thing in your file, excluding whitespace.
-```js
-/** import_parameters {
+```
+--[ import_parameters {
   parameters go here...
-} */
+} ]
 ```
 There is only one import parameter at the moment:
 
 `append: string` -- Injects the specified Lua code directly after the module is loaded. For example:
-```js
+```lua
 
-/** import_parameters {
+--[ import_parameters {
   "append": "print('Hello world')"
-} */
+} ]
 
 let add = (a, b) => a + b;
-// module stuff, etc...
+-- module stuff, etc...
 ```
-```rust
+```lua
 
 use "my_cool_module.jam";
-// prints Hello world
+-- prints Hello world
 ```
 
 The `use` statement is equivalent to Lua's `require` except for one thing: **the use statement works relative to the current file**. The use statement also considers "/" and "." to be equivalent.
@@ -549,7 +577,7 @@ The `use` statement is equivalent to Lua's `require` except for one thing: **the
 ### Prototypes
 Jammy provides an easy way to create prototypes. Just follow this example:
 ```lua
-// vec2.jam
+-- vec2.jam
 use "std/types.jam";
 
 prototype vec2 {
@@ -562,17 +590,17 @@ prototype vec2 {
 export vec2;
 ```
 `vec2` can then be used in another file like so:
-```rust
+```lua
 use "vec2.jam";
 let v = vec2(3, 4);
-print v; // prints (3, 4)
-print v:magnitude!; // prints 5
+print v; -- prints (3, 4)
+print v:magnitude!; -- prints 5
 ```
 
 Prototype inheritance can be done by supplying an argument to the `prototype` function. This argument is its super-prototype. An `extend` function exists which is an alias for `prototype` and can be used for inheritance. See the following example:
 
-```rust
-// vec3.jam
+```lua
+-- vec3.jam
 use "std/types.jam";
 use "vec2.jam";
 
@@ -598,7 +626,7 @@ Similarly, calling an `@` function will call a function on the instance, and ens
 ### Super
 When a prototype inherits from another prototype, the method `super` can be used within its methods, and it will call the equivalent method in its parent prototype. For example,
 
-```rust
+```lua
 prototype A { 
     name: () => "A";
 };
@@ -607,7 +635,7 @@ prototype B from A {
     name: () => super! .. "B";
 };
 
-print B!:name!; // prints AB
+print B!:name!; -- prints AB
 ```
 
 When not used as a function, it simply refers to the parent class' object.
@@ -628,16 +656,16 @@ Jammy has two ways to determine a table's length. One is to use `len my_table`. 
 
 ### Indexing objects 
 To index an object where the key is just a string, you can use `.` and then the name of the key, without quotes.
-```js
+```lua
 let a = {
   x: 5
 };
 
-print a.x; // prints 5
+print a.x; -- prints 5
 ```
 
 To index an object where the key is anything but an variable-style string, you can use `#`.
-```js
+```lua
 let a = luatable(
   {
     y: 5
@@ -646,7 +674,7 @@ let a = luatable(
   8
 );
 
-print a #1 #"y"; // prints 5
+print a #1 #"y"; -- prints 5
 ```
 
 ### Resolving truthy/falsy values
@@ -654,7 +682,7 @@ To turn a truthy/falsy value to an explicit boolean, use `bool my_truthy_value`.
 
 ## Example
 The following is the source code for Jammy's array class in the standard library.
-```rust
+```lua
 
 use "std/types.jam";
 
