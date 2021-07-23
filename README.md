@@ -720,7 +720,7 @@ g:f!; -- prints 5 three times
 You can also perform group operations using another group, which will match each element on the left side with its counterpart on the right side. For example:
 ```lua
 let a, b, c = 1, 2, 3;
-print << a, b, c >> = << 1, 2, 3 >> -- prints true;
+print << a, b, c >> == << 1, 2, 3 >> -- prints true;
 
 let d, e, f = { }, { }, { };
 let g = << d, e, f >>;
@@ -731,7 +731,7 @@ g.print_value = () :=> print @my_value;
 g:print_value!; -- prints 1, 2, and 3
 ```
 
-When used as an expression, a function call will return true if the return value of that function call on each element is a truthy falue. For example:
+When used as an expression, a function call will return true if the return value of that function call on each element is a truthy value. For example:
 ```lua
 let f = () :=> print @my_value;
 let a, b, c = { f: f }, { f: f }, { f: f };
