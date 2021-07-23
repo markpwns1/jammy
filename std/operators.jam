@@ -1,0 +1,24 @@
+
+let operators = {
+    unm: x => -x;
+    add: (a, b) => a + b;
+    sub: (a, b) => a - b;
+    mul: (a, b) => a * b;
+    div: (a, b) => a / b;
+    idiv: (a, b) => a // b;
+    mod: (a, b) => a % b;
+    pow: (a, b) => a ** b;
+    concat: (a, b) => a .. b;
+    eq: (a, b) => a == b;
+    lt: (a, b) => a < b;
+    le: (a, b) => a <= b;
+};
+
+let equivalence_operators = {
+    eq: (a, b) => a == b;
+    lt: (a, b) => a < b;
+    le: (a, b) => a <= b;
+};
+
+export operators;
+export equivalence_operators;

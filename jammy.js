@@ -213,6 +213,15 @@ const BINOP_REPLACE_TABLE = {
     "**": "^"
 };
 
+const op_to_f = {
+    "==": "eq",
+    "<=": "le",
+    "<": "lt",
+    "~=": "eq",
+    ">=": "le",
+    ">": "lt"
+};
+
 evaluators.binary_op = ast => {
     const left = evaluate(ast.left);
     const right = evaluate(ast.right);
@@ -220,6 +229,20 @@ evaluators.binary_op = ast => {
     switch (ast.op) {
         case "//": return `math.floor((${left})/(${right}))`;
         case "%": return `math.fmod((${left}), (${right}))`;
+
+        case "==":
+        case "<=":
+        case "<": {
+            if (ast.left.type == "group") return `${left}:${op_to_f[ast.op]}(${right})`;
+            else break;
+        }
+
+        case "~=":
+        case ">=":
+        case ">": {
+            if (ast.left.type == "group") return `(not ${left}:${op_to_f[ast.op]}(${right}))`;
+            else break;
+        }
     };
 
     return "(" + left + (BINOP_REPLACE_TABLE[ast.op] || ast.op) + right + ")";
@@ -231,6 +254,10 @@ const UNOP_REPLACE_TABLE = {
 
 evaluators.unary_op = ast => {
     return (UNOP_REPLACE_TABLE[ast.op] || ast.op) + "(" + evaluate(ast.right) + ")";
+};
+
+evaluators.group = ast => {
+    return "group.new(" + ast.elements.map(x => evaluate(x)).join(", ") + ")";
 };
 
 evaluators.var_dec = ast => {

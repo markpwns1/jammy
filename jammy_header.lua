@@ -33,8 +33,14 @@ end
 function tbl(...) return {...} end
 
 array = { 
-    new = function (...)
+    new = function ()
         error("Attempted to use an array without importing array.jam. Either import arrays with `use \"std/array.jam\";` or use luatable(...) in place of your array.", 2)
+    end
+}
+
+groups = {
+    new = function()
+        error("Attempted to use a group without importing group.jam. Import groups with `use \"std/group.jam\";`", 2)
     end
 }
 

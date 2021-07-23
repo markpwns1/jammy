@@ -1,0 +1,46 @@
+
+use "std/operators.jam";
+
+let group = { };
+
+group.new = (elements...) => setmetatable({ elements: elements }, group);
+
+group.__index = key :=> 
+    (group #key) || group.new(for i, v in ipairs @elements, v #key);
+
+group.__call = (head, tail...) :=> {
+    let ret = true;
+    if group.is_group head, {
+        -- print "AAAA";
+        for i, v in ipairs @elements, if !(v (head.elements #i, ...tail)), ret = false;
+    }
+    else 
+        for i, v in ipairs @elements, if !(v (head, ...tail)), ret = false;
+    => ret;
+};
+
+group.__newindex = (k, v) :=> >> 
+    if group.is_group v, 
+        for i, e in ipairs @elements, e #k = v.elements #i
+    else 
+        for i, e in ipairs @elements, e #k = v;
+
+group.is_group = x => getmetatable x == group;
+
+-- let inspect = import "inspect";
+let generate_op = op => r :=> {
+    let ret = true;
+    -- print ("SEX", inspect self, inspect r);
+    if group.is_group r, {
+        for i, l in ipairs @elements, if !op(l, r.elements #i), ret = false;
+    }
+    else for i, l in ipairs @elements, if !op(l, r), ret = false;
+
+    => ret;
+};
+
+group.eq = generate_op(operators.eq);
+group.lt = generate_op(operators.lt);
+group.le = generate_op(operators.le);
+
+export group;

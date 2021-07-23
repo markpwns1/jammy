@@ -10,6 +10,7 @@ const SYMBOLS = {
     "&&": "and",
     "||": "or",
     ">>": "zoom",
+    "<<": "lshift",
     "//": "floor_div",
     "**": "exponent",
     "+": "plus",

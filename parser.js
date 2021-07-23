@@ -512,13 +512,6 @@ exports.Parser = class Parser {
                 else return this.block(true);
             }
 
-            case "zoom": {
-                this.eat();
-                return ast("block_expr", {
-                    statements: [ this.statement() ]
-                });
-            }
-
             default: {
                 return this.binary();
             }
@@ -906,11 +899,18 @@ exports.Parser = class Parser {
         const errorMessage = "a value or expression"
 
         const t = this.expect(
-            ["at", "number", "string", "identifier", "open_paren", "open_square", "open_curly" ],
+            ["at", "number", "string", "identifier", "open_paren", "open_square", "open_curly", "zoom", "lshift" ],
             errorMessage
         );
 
         switch (t.type) {
+
+            case "zoom": {
+                this.eat();
+                return ast("block_expr", {
+                    statements: [ this.statement() ]
+                });
+            }
 
             case "at": {
                 this.eat();
@@ -939,6 +939,8 @@ exports.Parser = class Parser {
             case "open_curly": return this.table();
 
             case "open_square": return this.array();
+
+            case "lshift": return this.group();
 
             case "open_paren": {
 
@@ -1086,6 +1088,25 @@ exports.Parser = class Parser {
         this.eat("close_square");
 
         return ast("array", {
+            elements: elements
+        });
+    }
+
+    group() {
+        this.eat("lshift");
+
+        if(this.peek().type == "zoom") {
+            this.eat();
+            return ast("group", {
+                elements: [ ]
+            });
+        }
+
+        const elements = this.expressionList();
+
+        this.eat("zoom");
+
+        return ast("group", {
             elements: elements
         });
     }
