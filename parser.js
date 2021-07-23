@@ -23,12 +23,14 @@ const BINARY_OPS = {
     "str_concat": "..",
     "and": "&&",
     "or": "||",
+    "floor_div": "//",
     "plus": "+",
     "minus": "-",
     "times": "*",
     "divide": "/",
     "lt": "<",
-    "gt": ">"
+    "gt": ">",
+    "percent": "%"
 };
 
 function friendlyName(type) {

@@ -10,6 +10,7 @@ const SYMBOLS = {
     "&&": "and",
     "||": "or",
     ">>": "zoom",
+    "//": "floor_div",
     "+": "plus",
     "-": "minus",
     "*": "times",
@@ -31,7 +32,8 @@ const SYMBOLS = {
     ";": "semicolon",
     "?": "question_mark",
     "|": "union",
-    "@": "at"
+    "@": "at",
+    "%": "percent"
 };
 
 exports.SYMBOLS = SYMBOLS;

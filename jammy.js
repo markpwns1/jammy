@@ -213,7 +213,15 @@ const BINOP_REPLACE_TABLE = {
 };
 
 evaluators.binary_op = ast => {
-    return "(" + evaluate(ast.left) + (BINOP_REPLACE_TABLE[ast.op] || ast.op) + evaluate(ast.right) + ")";
+    const left = evaluate(ast.left);
+    const right = evaluate(ast.right);
+
+    switch (ast.op) {
+        case "//": return `math.floor((${left})/(${right}))`;
+        case "%": return `math.fmod((${left}), (${right}))`;
+    };
+
+    return "(" + left + (BINOP_REPLACE_TABLE[ast.op] || ast.op) + right + ")";
 } 
 
 const UNOP_REPLACE_TABLE = {
