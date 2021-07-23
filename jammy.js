@@ -209,7 +209,8 @@ evaluators.table = ast => {
 
 const BINOP_REPLACE_TABLE = {
     "&&": " and ",
-    "||": " or "
+    "||": " or ",
+    "**": "^"
 };
 
 evaluators.binary_op = ast => {

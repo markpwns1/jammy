@@ -30,7 +30,8 @@ const BINARY_OPS = {
     "divide": "/",
     "lt": "<",
     "gt": ">",
-    "percent": "%"
+    "percent": "%",
+    "exponent": "^"
 };
 
 function friendlyName(type) {

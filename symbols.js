@@ -11,6 +11,7 @@ const SYMBOLS = {
     "||": "or",
     ">>": "zoom",
     "//": "floor_div",
+    "**": "exponent",
     "+": "plus",
     "-": "minus",
     "*": "times",
