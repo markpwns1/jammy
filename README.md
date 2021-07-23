@@ -680,6 +680,70 @@ print a #1 #"y"; -- prints 5
 ### Resolving truthy/falsy values
 To turn a truthy/falsy value to an explicit boolean, use `bool my_truthy_value`. It is equivalent to `not not my_truthy_value` in Lua.
 
+### Groups
+A group is a kind of data structure on which any operation performed on it is performed on each of its elements. For example:
+
+```lua
+let f = () => print "Hello world!";
+let a, b, c = { f: f }, { f: f }, { f: f };
+
+let g = << a, b, c >>;
+
+g.f!; -- prints Hello world! three times
+```
+
+Groups have some comparative functions that will return true only if it's true for all elements of the group.
+```lua
+let a, b, c = 1, 2, 2;
+print << a, b, c >> :eq 2; -- prints false
+print << a, b, c >> :gt 0; -- prints true
+```
+
+Jammy provides syntactic sugar for these comparative functions, but **only if the left side is directly a group**. This is due to a Lua quirk that prevents me from overloading comparative operators under certain circumstances. For example:
+```lua
+let a, b, c = 1, 2, 2;
+print << a, b, c >> > 0; -- prints true
+let g = << a, b, c >>;
+print g > 0; -- error
+```
+
+You can also set a field on a group and it will set that field for each element.
+```lua
+let f = () :=> print @my_value;
+let a, b, c = { f: f }, { f: f }, { f: f };
+
+let g = << a, b, c >>;
+g.my_value = 5;
+g:f!; -- prints 5 three times
+```
+
+You can also perform group operations using another group, which will match each element on the left side with its counterpart on the right side. For example:
+```lua
+let a, b, c = 1, 2, 3;
+print << a, b, c >> = << 1, 2, 3 >> -- prints true;
+
+let d, e, f = { }, { }, { };
+let g = << d, e, f >>;
+
+g.my_value = << 1, 2, 3 >>; -- sets my_value on each of them to 1, 2, and 3
+g.print_value = () :=> print @my_value;
+
+g:print_value!; -- prints 1, 2, and 3
+```
+
+When used as an expression, a function call will return true if the return value of that function call on each element is a truthy falue. For example:
+```lua
+let f = () :=> print @my_value;
+let a, b, c = { f: f }, { f: f }, { f: f };
+let g = << a, b, c >>;
+
+g.my_value = << 1, 2, 3 >>;
+print g:f!; -- prints true
+
+b.my_value = false;
+print g:f!; -- prints false
+```
+
 ## Example
 The following is the source code for Jammy's array class in the standard library.
 ```lua

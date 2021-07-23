@@ -43,9 +43,26 @@ typechecks.int = typechecks.int || (x => (type x == "number") && (math.fmod(x, 1
 typechecks.positive = typechecks.positive || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x >= 0);
 typechecks.natural = typechecks.natural || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x > 0);
 
+prototype type_advanced {
+    constructor: (c, is_unchecked, is_optional, types...) :=> {
+        @checker = c;
+        @is_unchecked = is_unchecked;
+        @is_optional = is_optional;
+        @types = types;
+    };
+
+    check: v :=> {
+        if @is_unchecked, => true;
+        if @is_optional && (v == nil), => true;
+        for i, t in ipairs @types, if __match_type(@checker, v, t), => true;
+    };
+};
+
+export __match_type;
 export __typecheck;
 export __typecheck_arg;
 export __typecheck_arg_optional;
 export __typecheck_arg_union;
 export __typecheck_arg_union_optional;
 export types;
+export type_advanced;

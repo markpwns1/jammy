@@ -4,6 +4,8 @@ use "std/types.jam";
 let table_mt = { 
     push: (t: table, v) => >> t #(len t + 1) = v;
     set: (t: table, k: exists, v) => >> t #k = v;
+    contains_key: (t: table, k: exists) => !! t #k;
+    contains_value: (t: table, v: exists) => !! >> for k, _v in pairs t, if v == _v, => true;
 };
 
 export table_mt as table;
