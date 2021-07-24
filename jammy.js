@@ -838,7 +838,7 @@ file -- Raw compilation without prepending the jammy header
 
 program.usage("<compile mode> <source directory> <output directory> [options...]");
 program.option("-e, --entry <file>", "Program mode only. Specifies the entry point of the program", "main.jam");
-program.option("-s, --no-std", "Copies the jammy standard library");
+program.option("-s, --no-std", "Does not copy the Jammy standard library");
 program.option("-m, --minify", "Minifies compiled files (including Lua files)");
 
 program.parse(process.argv);

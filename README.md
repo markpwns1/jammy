@@ -1,4 +1,5 @@
-# Jammy
+![](https://github.com/markpwns1/jammy/blob/main/jammy-2x.png?raw=true)
+![](jammy-2x.png)
 
 Jammy is an original programming language written in NodeJS that transpiles to Lua, designed with speed of iteration as a priority. It's named Jammy because it's designed for writing Love2D games as fast as possible for game jams. Pull requests welcome!
 

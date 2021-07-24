@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "description": "The Jammy programming language",
   "main": "jammy.js",
+  "bin": {
+    "jammy": "jammy.js"
+  },
   "dependencies": {
     "commander": "^8.0.0",
     "luamin": "^1.0.4"
