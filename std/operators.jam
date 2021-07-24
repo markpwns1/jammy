@@ -9,15 +9,22 @@ let operators = {
     mod: (a, b) => a % b;
     pow: (a, b) => a ** b;
     concat: (a, b) => a .. b;
+    
     eq: (a, b) => a == b;
     lt: (a, b) => a < b;
     le: (a, b) => a <= b;
+    neq: (a, b) => a ~= b;
+    gt: (a, b) => a > b;
+    ge: (a, b) => a >= b;
 };
 
 let equivalence_operators = {
     eq: (a, b) => a == b;
     lt: (a, b) => a < b;
     le: (a, b) => a <= b;
+    neq: (a, b) => a ~= b;
+    gt: (a, b) => a > b;
+    ge: (a, b) => a >= b;
 };
 
 export operators;

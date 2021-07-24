@@ -13,6 +13,7 @@ const SYMBOLS = {
     "<<": "lshift",
     "//": "floor_div",
     "**": "exponent",
+    "^": "up",
     "+": "plus",
     "-": "minus",
     "*": "times",

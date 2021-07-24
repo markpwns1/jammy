@@ -86,3 +86,26 @@ function path_join(b,c)
     end
     return table.concat(d,"/")
 end 
+
+-- let iter = a: table => {
+--     let n, elements = 0, { };
+--     for k, _ in pairs(a), {
+--         elements #(len elements + 1) = k;
+--         n = n + 1;
+--     };
+
+--     let i = 0;
+--     => () => {
+--         i = i + 1;
+--         if i <= n, => elements #i;
+--     };
+-- };
+
+function iter(a)
+    local n, i, elements = #a, 0, {}
+    for j, v in ipairs(a) do elements[j] = v end
+    return function()
+        i = i + 1
+        if i <= n then return elements[i] end
+    end
+end

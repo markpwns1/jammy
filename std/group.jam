@@ -43,4 +43,8 @@ group.eq = generate_op(operators.eq);
 group.lt = generate_op(operators.lt);
 group.le = generate_op(operators.le);
 
+group.neq = generate_op(operators.neq);
+group.gt = generate_op(operators.gt);
+group.ge = generate_op(operators.ge);
+
 export group;

@@ -15,6 +15,12 @@ function ast(type, props) {
     }
 }
 
+const CONFLICTING_UNARY_OPS = [
+    "minus",
+    "percent",
+    "times"
+]
+
 const BINARY_OPS = {
     "neq": "~=",
     "eq": "==",
@@ -741,7 +747,7 @@ exports.Parser = class Parser {
     }
 
     unary() {
-        if(this.match("identifier", "excl", "minus")) {
+        if(this.match("identifier", "excl", "minus", "up", "times", "percent")) {
             const t = this.eat();
 
             switch(t.type) {
@@ -752,6 +758,21 @@ exports.Parser = class Parser {
 
                 case "minus": return ast("unary_op", {
                     op: "-",
+                    right: this.unary()
+                });
+
+                case "times": return ast("unary_op", {
+                    op: "*",
+                    right: this.unary()
+                });
+
+                case "up": return ast("unary_op", {
+                    op: "^",
+                    right: this.unary()
+                });
+
+                case "percent": return ast("unary_op", {
+                    op: "%",
                     right: this.unary()
                 });
 
@@ -868,7 +889,7 @@ exports.Parser = class Parser {
         
         if(isExpr) {
             const binary = this.tryMatch(this.binary, () => {
-                if(!this.match("minus")) {
+                if(!this.match(...CONFLICTING_UNARY_OPS)) {
                     return ast("method_call", {
                         args: [ this.unary() ]
                     });
@@ -876,7 +897,7 @@ exports.Parser = class Parser {
             });
 
             if(!binary) {
-                if(!this.match("minus")) {
+                if(!this.match(...CONFLICTING_UNARY_OPS)) {
                     const expr = this.tryMatch(this.expression, this.expression);
                     if(expr) return ast("method_call", {
                         args: [ expr ]

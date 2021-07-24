@@ -249,7 +249,10 @@ evaluators.binary_op = ast => {
 } 
 
 const UNOP_REPLACE_TABLE = {
-    "!": "not "
+    "!": "not ",
+    "^": "pairs",
+    "*": "iter",
+    "%": "ipairs"
 };
 
 evaluators.unary_op = ast => {
@@ -701,7 +704,7 @@ const translate = filename => {
                 text += "\n";
     
                 console.log(text);
-                console.log(err);
+                // console.log(err);
             }
             catch {
                 console.log("There was an error displaying this error. Here is an uglier version of the error:");
