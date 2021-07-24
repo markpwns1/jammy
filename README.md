@@ -237,6 +237,33 @@ vec2.magnitude = () [vec2] :=> math.sqrt((@x * @x) + (@y * @y));
 
 Note that all these special safety features are not idiomatic to Jammy (because they take more time to write). They were added to facilitate writing a standard library, and I expect that type annotations will not be necessary during a game jam (Jammy's intended use-case).
 
+### Function Overloading
+Functions can be overloaded to change their behaviour depending on the type or number of arguments they're given. In order to use function overloading, you must `use "std/function.jam";`. 
+
+The syntax for function overloading is a `with` expression, followed by a list of function definitions separated by `;` surrounded by `{ }`. For example:
+
+```lua
+use "std/types.jam";
+use "std/function.jam";
+
+let f = with {
+    (x: number, y: number) => >> print x + y;
+    (x: string) => print "$${x}$";
+    (x: string, args...) => print "${x}: ${table.concat(args, ", ")}";
+    (x: number) => print x;
+    () => print "Hello world";
+};
+
+f "abc123"; -- prints $abc123$
+f (1, 2); -- prints 3
+f 1 + 4; -- prints 5
+f!; -- prints "Hello world"
+f ("foo", 420, "bar", "baz"); -- prints "foo: 420, bar, false"
+
+f (1, 2, 3, 4, 5); 
+-- lua: out/main.lua:14: No suitable overload found for the following arguments: number, number, number, number, number
+```
+
 ### Statements and expressions
 An expression is code that evaluates to a value. For example, `"hello world"`, `5 + 6`, and `math.sin(5)` are all expressions. A statement is code that does not evaluate to a value. For example, `while i < 10, i = i + 1`, `let x = 5`, `y = 4` are all statements.
 

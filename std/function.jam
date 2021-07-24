@@ -1,39 +1,92 @@
 
 use "std/types.jam";
+use "std/iter.jam";
+
+let inspect = import "inspect";
 
 prototype func_group {
 
     constructor: (f: func_def) :=> {
         @functions = tbl!;
-        @add_func(f);
+        @hashmap_arg = tbl!;
+        @variadic_funcs = tbl!;
+        @add f;
     };
 
-    add_func: (f: func_def) :=> {
+    add: (f: func_def) :=> {
         @functions #(len @functions + 1) = f;
+
+        if f.maximum_args, {
+            for i in range_inc (f.minimum_args, f.maximum_args), {
+                if !@hashmap_arg #i, @hashmap_arg #i = tbl!;
+                @hashmap_arg #i #(len @hashmap_arg #i + 1) = f;
+            };
+        }
+        else @variadic_funcs #(len @variadic_funcs + 1) = f;
+        
+        -- table.sort(@functions, (a, b) => (len a.types + a.defined_types) > (len b.types + b.defined_types));
         => @;
     };
 
     is_func_group: x: exists => getmetatable x == func_group;
 
     __call: (args...) :=> {
+        let n = len args;
+        if @hashmap_arg #n, for j, f in ipairs @hashmap_arg #n, {
+            let good = true;
+            for i in range_inc n, {
+                if f.types #i && !f.types#i:check(f.typechecks, args #i), {
+                    good = false;
+                    break;
+                };
+            };
+            if good, => f.f ...args;
+        };
+        for j, f in ipairs @variadic_funcs, {
+            let good = true;
+            for i in range_inc f.minimum_args, {
+                if f.types #i && !f.types#i:check(f.typechecks, args #i), {
+                    good = false;
+                    break;
+                };
+            };
+            if good, => f.f ...args;
+        };
 
+        error ("No suitable overload found for the following arguments: ${
+            if len args > 0, table.concat(tbl for i, v in ipairs args, type v, ", ")
+            else "(no arguments)"
+        }", 2);
     };
 };
 
 prototype func_def {
-    constructor: (f: function, t: table, v: boolean) :=> >> 
-        @f, @types, @is_variadic = f, t, v;
+    constructor: (c: table, f: function, t: table, v: boolean) :=> {
+        @typechecks, @f, @types, @is_variadic = c, f, t, v;
+        @maximum_args = if @is_variadic, nil else len @types;
+        @minimum_args = reduce(0, tbl ipairs @types, (n, i, t) => if (t.is_optional || t.is_unchecked), n else i);
+        @defined_types = reduce(0, tbl ipairs @types, (n, i, t) => if (t.is_optional || t.is_unchecked), n else n + 1);
+    };
+
+    match_types: args :=> !! >> for i, v in ipairs @types, if !t:check(@typechecks, args #i), => false;
+
+    defined_matched_types: args :=> reduce(0, tbl ipairs @types, 
+        (n, i, t) => 
+            if (t.is_unchecked), n
+            else if t:check (@typechecks, args #i), n + 1
+            else n
+    );
 
     __call: (args...) :=> f(...args);
-}
+};
 
-let add_func = (o, f: func_def) => 
-    if func_group.is_func_group o, 
-        o:add_func f;
-    else if type o == "function",
-        func_group f;
-    else f;
+-- let add_func = (o, f: func_def) => 
+--     if func_group.is_func_group o, 
+--         o:add_func f
+--     else if type o == "function",
+--         func_group f
+--     else f;
 
 export func_group;
 export func_def;
-export add_func;
+-- export add_func;

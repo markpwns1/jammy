@@ -5,9 +5,9 @@ let primitives = {
     string: true,
     boolean: true,
     table: true,
-    function: true,
     thread: true,
-    userdata: true
+    userdata: true,
+    function: true
 };
 
 let __typeerror = (i, v, e) 
@@ -42,19 +42,22 @@ typechecks.exists = typechecks.exists || (x => x ~= nil);
 typechecks.int = typechecks.int || (x => (type x == "number") && (math.fmod(x, 1) == 0));
 typechecks.positive = typechecks.positive || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x >= 0);
 typechecks.natural = typechecks.natural || (x => (type x == "number") && (math.fmod(x, 1) == 0) && x > 0);
+typechecks.callable = typechecks.callable || (x => (type x == "function") || ((type x == "table") && {
+    let mt = getmetatable x;
+    => (type mt == "table") && (type mt.__call == "function");
+}));
 
 prototype type_advanced {
-    constructor: (c, is_unchecked, is_optional, types...) :=> {
-        @checker = c;
+    constructor: (is_unchecked, is_optional, types...) :=> {
         @is_unchecked = is_unchecked;
-        @is_optional = is_optional;
-        @types = types;
+        @is_optional = is_optional || is_unchecked;
+        @types = types || tbl!;
     };
 
-    check: v :=> {
+    check: (c, v) :=> {
         if @is_unchecked, => true;
         if @is_optional && (v == nil), => true;
-        for i, t in ipairs @types, if __match_type(@checker, v, t), => true;
+        for i, t in ipairs @types, if __match_type(c, v, t), => true;
     };
 };
 

@@ -488,29 +488,29 @@ exports.Parser = class Parser {
                 else return this.binary();
             }
 
-            case "open_curly": {
-                if(this.peek(1).type == "close_curly") {
-                    return this.binary();
-                }
-                else if(this.peek(1).type == "identifier") {
+            // case "open_curly": {
+            //     if(this.peek(1).type == "close_curly") {
+            //         return this.binary();
+            //     }
+            //     else if(this.peek(1).type == "identifier") {
 
-                    let blockExpr = this.tryNotMatch(() => {
-                        this.eat();
-                        this.eat("identifier");
-                        this.eat("colon");
-                    }, () => this.block(true));
+            //         let blockExpr = this.tryNotMatch(() => {
+            //             this.eat();
+            //             this.eat("identifier");
+            //             this.eat("colon");
+            //         }, () => this.block(true));
 
-                    blockExpr = blockExpr || this.tryMatch(() => {
-                        this.eat();
-                        this.statement();
-                        this.eat("semicolon");
-                    }, () => this.block(true));
+            //         blockExpr = blockExpr || this.tryMatch(() => {
+            //             this.eat();
+            //             this.statement();
+            //             this.eat("semicolon");
+            //         }, () => this.block(true));
     
-                    if(blockExpr) return blockExpr;
-                    else return this.binary();
-                }
-                else return this.block(true);
-            }
+            //         if(blockExpr) return blockExpr;
+            //         else return this.binary();
+            //     }
+            //     else return this.block(true);
+            // }
 
             default: {
                 return this.binary();
@@ -899,7 +899,8 @@ exports.Parser = class Parser {
         const errorMessage = "a value or expression"
 
         const t = this.expect(
-            ["at", "number", "string", "identifier", "open_paren", "open_square", "open_curly", "zoom", "lshift" ],
+            ["at", "number", "string", "identifier", "open_paren", 
+            "open_square", "open_curly", "zoom", "lshift" ],
             errorMessage
         );
 
@@ -936,7 +937,29 @@ exports.Parser = class Parser {
                 });
             }
 
-            case "open_curly": return this.table();
+            case "open_curly": {
+                if(this.peek(1).type == "close_curly") {
+                    return this.table();
+                }
+                else if(this.peek(1).type == "identifier") {
+
+                    let blockExpr = this.tryNotMatch(() => {
+                        this.eat();
+                        this.eat("identifier");
+                        this.eat("colon");
+                    }, () => this.block(true));
+
+                    blockExpr = blockExpr || this.tryMatch(() => {
+                        this.eat();
+                        this.statement();
+                        this.eat("semicolon");
+                    }, () => this.block(true));
+    
+                    if(blockExpr) return blockExpr;
+                    else return this.table();
+                }
+                else return this.block(true);
+            }
 
             case "open_square": return this.array();
 
@@ -1023,6 +1046,8 @@ exports.Parser = class Parser {
 
                     case "nil": return ast("nil");
 
+                    case "with": return this.with();
+
                     // case "my": return ast("variable", {
                     //     name: "self"
                     // });
@@ -1089,6 +1114,42 @@ exports.Parser = class Parser {
 
         return ast("array", {
             elements: elements
+        });
+    }
+
+    with() {
+        console.log("AAAAAAAAAAAAAAAAAAA");
+        // this.eat();
+        this.eat("open_curly");
+
+        let elements = [ ];
+
+        elements.push(this.func());
+
+        if(this.match("comma", "semicolon")) {
+            this.eat();
+
+            while(!this.match("close_curly", "EOF")) {
+
+                elements.push(this.func());
+    
+                if(this.match("comma", "semicolon")) {
+                    this.eat();
+                }
+                else {
+                    break;
+                }
+            } 
+        }
+        
+        this.eat("close_curly");
+
+        if(elements.length < 2) {
+            throw this.generateError("A with statement must contain more than 1 function");
+        }
+
+        return ast("with", {
+            funcs: elements
         });
     }
 

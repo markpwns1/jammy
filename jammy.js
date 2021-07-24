@@ -532,12 +532,24 @@ const SIMPLIFY_IF_RETURNING = [
     "match_expr"
 ];
 
+evaluators.with = ast => {
+    const do_func = f => {
+        return `func_def(typechecks, ${evaluate(f, false)}, {${f.args.map(x => x.type? `type_advanced(false, ${x.type.optional}, ${x.type.allowed.map(x => `"${x}"`).join(", ")})` : "type_advanced(true)")}}, ${Boolean(f.variadic)})`
+    };
+    let txt = "func_group(" + do_func(ast.funcs[0]) + ")";
+    for (let i = 1; i < ast.funcs.length; i++) {
+        const f = ast.funcs[i];
+        txt += ":add(" + do_func(f) + ")";
+    }
+    return txt;
+};
+
 const evaluate_functiony = ast => {
     return SIMPLIFY_IF_RETURNING.includes(ast.type)? evaluate(ast, true) : ("return " + evaluate(ast));
 };
 
 const BAD_SELF_TEXT = `bad argument 'self' to `;
-evaluators.function = ast => {
+evaluators.function = (ast, generate_typechecks = true) => {
     if(ast.takesSelf) {
         ast.args.unshift({ name: "self" });
     }
@@ -562,7 +574,7 @@ evaluators.function = ast => {
         txt += ast.args.map(x => x.value? `${x.name} = ${x.name} == nil and (${evaluate(x.value)}) or ${x.name};` : "").join("");
     }
 
-    if(ast.args.some(x => x.type)) {
+    if(generate_typechecks && ast.args.some(x => x.type)) {
         for (let i = 0; i < ast.args.length; i++) {
             const offset = ast.takesSelf? 0 : 1;
             const arg = ast.args[i];
@@ -689,7 +701,7 @@ const translate = filename => {
                 text += "\n";
     
                 console.log(text);
-                // console.log(err);
+                console.log(err);
             }
             catch {
                 console.log("There was an error displaying this error. Here is an uglier version of the error:");
