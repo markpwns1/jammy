@@ -1,0 +1,26 @@
+
+let f = a => b => a;
+let g = f 5;
+let h = g!;
+
+--[
+    f: (T) -> (any?) -> T
+    g: (any?) -> number
+    h: number
+]
+
+
+let c;
+let x = (a, b, d) => c;
+let a = x(1, 2);
+let b = true;
+let e = x(1, 2, false);
+a = b;
+
+--[
+    c: boolean
+    x: (any?, any?, any?) -> boolean
+    a, b, e: boolean
+]
+
+

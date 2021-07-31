@@ -1,5 +1,5 @@
 
-class Token {
+exports.Token = class Token {
     type
 
     constructor(t, other) {
@@ -10,5 +10,3 @@ class Token {
         }
     }
 }
-
-exports.Token = Token;

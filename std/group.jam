@@ -11,7 +11,6 @@ group.__index = key :=>
 group.__call = (head, tail...) :=> {
     let ret = true;
     if group.is_group head, {
-        -- print "AAAA";
         for i, v in ipairs @elements, if !(v (head.elements #i, ...tail)), ret = false;
     }
     else 
