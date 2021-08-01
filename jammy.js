@@ -107,7 +107,7 @@ evaluators.class = ast => {
         });
     }
 
-    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and (arg.__class.__name=="${ast.name}") end }); `;
+    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and has_metatable(arg, ${ast.name}) end }); `;
     txt += `local __proto = {};`;
     txt += `__proto.__index = __proto;`;
     txt += `${ast.name} = setmetatable(__proto, setmetatable({
