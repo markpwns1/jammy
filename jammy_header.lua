@@ -54,11 +54,15 @@ function len(x) return #x end
 function bool(x) return not not x end
 
 function table.merge(a, b)
+    if a == b then return b end
     if b and (type(b) == "table") then 
         local bmt = getmetatable(b) or { }
         local i = bmt.__index or nop;
         local a = a or { }
-        bmt.__index = function (self, key) return i(self, key) or a[key] end
+        bmt.__index = function (self, key) 
+            return i(self, key) or a[key] 
+        end
+        -- if i == bmt.__index then bmt.__index = function (self, key) return a[key] end end
         setmetatable(b, bmt)
     end
     return b

@@ -36,6 +36,9 @@ let __typecheck_arg_union_optional = (c, i, v, ts) => {
 let types = {
     subclass_of: proto: table => arg => (type arg == "table") && (arg.__class == proto);
     has_metatable: t: table => arg => has_metatable(arg, t);
+    to_string: v => 
+        if (type v == "table") && v.__class && v.__class.__name, v.__class.__name
+        else type v;
 };
 
 typechecks.exists = typechecks.exists || (x => x ~= nil);
@@ -59,6 +62,10 @@ prototype type_advanced {
         if @is_optional && (v == nil), => true;
         for i, t in ipairs @types, if __match_type(c, v, t), => true;
     };
+
+    __tostring: () :=> 
+        if @is_unchecked, "any" 
+        else table.concat(@types, ", ") .. (if @is_optional, "?" else "")
 };
 
 export __match_type;

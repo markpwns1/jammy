@@ -107,6 +107,7 @@ evaluators.class = ast => {
         });
     }
 
+    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and (arg.__class.__name=="${ast.name}") end }); `;
     txt += `local __proto = {};`;
     txt += `__proto.__index = __proto;`;
     txt += `${ast.name} = setmetatable(__proto, setmetatable({
@@ -132,7 +133,6 @@ evaluators.class = ast => {
     }).join("");
     
     txt += "end ";
-    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and (arg.__class==${ast.name}) end }) `;
     
     return txt;
 };
@@ -537,7 +537,11 @@ const SIMPLIFY_IF_RETURNING = [
 
 evaluators.with = ast => {
     const do_func = f => {
-        return `func_def(typechecks, ${evaluate(f, false)}, {${f.args.map(x => x.type? `type_advanced(false, ${x.type.optional}, ${x.type.allowed.map(x => `"${x}"`).join(", ")})` : "type_advanced(true)")}}, ${Boolean(f.variadic)})`
+        let e = evaluate(f, false);
+        let t = `func_def(typechecks, ${e}, {${f.args.map(x => x.type? `type_advanced(false, ${x.type.optional}, ${x.type.allowed.map(x => `"${x}"`).join(", ")})` : "type_advanced(true)")}}, ${Boolean(f.variadic)})`
+        
+        // console.log(t);
+        return t;
     };
     let txt = "func_group(" + do_func(ast.funcs[0]) + ")";
     for (let i = 1; i < ast.funcs.length; i++) {

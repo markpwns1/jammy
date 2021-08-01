@@ -54,10 +54,14 @@ prototype func_group {
         };
 
         error ("No suitable overload found for the following arguments: ${
-            if len args > 0, table.concat(tbl for i, v in ipairs args, type v, ", ")
+            if len args > 0, table.concat(tbl for i, v in ipairs args, types.to_string v, ", ")
             else "(no arguments)"
+        }\nThe following overloads are available:\n${
+            table.concat(tbl for i, v in ipairs @functions, " - ${v:__tostring!}", "\n")
         }", 2);
     };
+
+    __tostring: () :=> table.concat(tbl for i, v in ipairs @functions, v:__tostring!, " | ");
 };
 
 prototype func_def {
@@ -78,6 +82,8 @@ prototype func_def {
     );
 
     __call: (args...) :=> f(...args);
+
+    __tostring: () :=> "(${table.concat(tbl for i, v in ipairs @types, v:__tostring!, ", ")}${if @is_variadic, ", ..." else ""}) => ...";
 };
 
 -- let add_func = (o, f: func_def) => 
