@@ -140,16 +140,28 @@ evaluators.class = ast => {
     txt += `local __class;`
     txt += `local __super = ${superproto};`;
     txt += `local __base = {};`;
-    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and has_metatable(arg, __base) end }); `;
+    txt += `typechecks = table.merge(typechecks, { ${ast.name} = function(arg) return (type(arg)=="table") and has_metatable(arg, ${ast.name}) end }); `;
+    
+    txt += ast.table.entries.map(x => {
+        let t = "__base[\"" + x.key + "\"] = ";
+        method_stack.push({
+            name: x.key
+        });
+        if(x.value.type == "function" && typeof x.value.selfType === "undefined") {
+            x.value.selfType = { type: "variable", name: "__base" };
+        }
+        t += evaluate(x.value);
+        method_stack.pop();
+        return t + ";";
+    }).join("");
+    txt += `__base.__index = __base;`;
+    if(ast.extending) {
+        txt += `setmetatable(__base, __super.__base);`
+    }
     
     txt += `__class = setmetatable({
         __init = ${(() => {
-            if(!constructor) {
-                if(ast.extending) {
-                    return "__super.__init"
-                }
-                else return "function() end";
-            } 
+            if(!constructor) return "function() end"
             method_stack.push({
                 name: "__init"
             });
@@ -181,27 +193,8 @@ evaluators.class = ast => {
         end
     });`;
 
-    txt += `${ast.name} = __class;`
-    
-    txt += ast.table.entries.map(x => {
-        let t = "__base[\"" + x.key + "\"] = ";
-        method_stack.push({
-            name: x.key
-        });
-        if(x.value.type == "function" && typeof x.value.selfType === "undefined") {
-            x.value.selfType = { type: "variable", name: "__base" };
-        }
-        t += evaluate(x.value);
-        method_stack.pop();
-        return t + ";";
-    }).join("");
-    txt += `__base.__index = __base.__index or __base;`;
-    if(ast.extending) {
-        txt += `setmetatable(__base, __super.__base);`
-    }
-
     txt += `__base.__class = __class;`
-    txt += `if __super and __super.__inherited then __super:__inherited(__class) end;`
+    txt += `${ast.name} = __class;`
     txt += "end ";
     
     return txt;

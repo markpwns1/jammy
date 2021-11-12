@@ -58,6 +58,10 @@ function table.merge(a, b)
     if b and (type(b) == "table") then 
         local bmt = getmetatable(b) or { }
         local i = bmt.__index or nop;
+        if type(i) == "table" then 
+            local tbl_index = bmt.__index
+            i = function(self, name) return tbl_index[name] end
+        end
         local a = a or { }
         bmt.__index = function (self, key) 
             return i(self, key) or a[key] 
